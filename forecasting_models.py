@@ -138,11 +138,13 @@ class CustomProphet(BaseForecaster):
         if "y" in df.columns:
             df = df.drop(columns=["y"])
 
-        return self.model.predict(df)
+        forecast = self.model.predict(df)
+        yhat = forecast["yhat"].values
+        return yhat
 
 
     
     
 if __name__ == "__main__":
-    print("Testing github connectivity")
+    ...
 
