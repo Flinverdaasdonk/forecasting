@@ -144,5 +144,5 @@ class CustomProphet(BaseForecaster):
     
     
 if __name__ == "__main__":
-    ...
+    print("Testing github connectivity")
 
