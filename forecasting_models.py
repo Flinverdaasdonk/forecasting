@@ -4,6 +4,7 @@ import data_utilities as dut
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
+import statsmodels.tsa.statespace.sarimax.SARIMAX as SARIMAX
 
 class BaseForecaster:
     def __init__(self, df, additional_data_transformations, split):
@@ -141,6 +142,29 @@ class CustomProphet(BaseForecaster):
         forecast = self.model.predict(df)
         yhat = forecast["yhat"].values
         return yhat
+
+class CustomSARIMAX(BaseForecaster):
+    def __init__(self, df, additional_data_transformations, split=0.75, **kwargs):
+        super().__init__(df, additional_data_transformations=additional_data_transformations, split=split)
+        self.model = SARIMAX(**kwargs)
+
+    def get_base_transformations(self):
+        ...
+
+    def fit(self):
+        ...
+
+    def predict(self, X):
+        ...
+
+    def final_preprocessing_data(self, df):
+        X = ...
+        y = ...
+        return X, y
+
+class CustomRulesBased(BaseForecaster):
+    ...
+
 
 
     
