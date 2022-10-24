@@ -16,11 +16,11 @@ if __name__ == "__main__":
     import pandas as pd
     
     print("Start forecasting")
-    tiny_test = True
+    tiny_test = False
 
     ### PREPARE DATA
     usable_data_folder = Path(r"C:\Users\Flin\OneDrive - TU Eindhoven\Flin\Flin\01 - Uni\00_Internship\Nokia\00_Programming\data_preparation\data\usable")
-    fn = r"residential\h=2_residential_2018_NO_PV_SFH34_2018.csv"  # r"industrial\h=2_industrial_2016_LG_1.csv"
+    fn = r"industrial\h=2_industrial_2016_LG_1.csv"  # r"residential\h=2_residential_2018_NO_PV_SFH34_2018.csv"  
     path = usable_data_folder / fn
 
     df = pd.read_csv(path)
