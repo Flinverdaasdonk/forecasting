@@ -1,0 +1,268 @@
+import numpy as np
+import pandas as pd
+import datetime
+import holidays
+
+class DataPipeline:
+    """Container for all required transformations for a specific forecasting model
+
+    Args:
+        transforms; list: the transforms for all data
+        
+    Returns:
+        None
+    
+    Raises:
+        No errors
+
+    """
+    def __init__(self, transforms=None):
+        if transforms is not None and not isinstance(transforms, list):
+            transforms = [transforms]
+
+        self.transforms = [] if transforms is None else transforms
+
+    def __call__(self, df):
+        return self.apply_data_transformations(transforms=self.transforms, df=df)
+
+    @staticmethod
+    def apply_data_transformations(transforms, df):
+        transformed_df = df.copy(deep=True)
+        for tf in transforms:
+            transformed_df = tf(transformed_df)
+
+        return transformed_df
+
+
+class Transform:
+    def __init__(self, **kwargs):
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
+    def __call__(self, df):
+        raise NotImplementedError
+
+
+class TimeseriesToRow(Transform):
+    """ Takes in a timeseries, and converts it into a multivariate dataset based on the input data.
+    E.g. for a window of 2:
+    [a,b,c,d]=[w,x,y,z] -> [[a,b],[b,c], [c,d]] = [x, y, z]
+    
+    """
+    def __init__(self, column_name, history_window):
+        super().__init__(column_name=column_name, history_window=history_window)
+
+        assert isinstance(column_name, str)
+        assert isinstance(history_window, int)
+        assert history_window > 0
+
+    def __call__(self, df):
+        # grab the column from the df we want to offset, e.g. [a, b, c, d]
+        series = list(df[self.column_name].values)
+
+        # convert the series to a list of lists, where each sub-list contains the history window for that timestep
+        # (see docstring example). e.g. [[a, b], [b, c], [c, d]]
+        timeseries_matrix = [series[i:i+self.history_window] for i in range(len(series) - self.history_window + 1)]
+        timeseries_matrix = np.array(timeseries_matrix)
+
+        """ NOTE:
+        The matrix is currently a (len(df)-history_window+1, history_window) matrix.
+        The LAST column is the most RECENT entry for the value we're trying to predict (since the input timeseries goes forward in time)
+        """ 
+
+        # Remove the first entries from the dataframe, to account for the lost entries (again, see docstring example)
+        shortened_df = df.copy(deep=True).iloc[self.history_window-1:]  # e.g [a, b, c, d]=[w,x,y,z] -> [b,c,d]=[x,y,z]; remember that target column [w,x,y,z] is IN df
+
+        # FInd out at which column index the original column was placed
+        col_idx = list(df.columns).index(self.column_name)
+        
+        # remove the original column
+        shortened_df.drop(columns=[self.column_name], inplace=True)
+
+        # for each step along the history
+        for i in range(self.history_window):
+
+            name = f"{self.column_name}"
+            if i > 0:
+                name += f"-{i}"
+
+
+            # grab the appropriate values from the ts_mat; 
+            # note; last column 
+            mat_idx = (self.history_window - 1) - i
+            values = timeseries_matrix[:, mat_idx]
+
+            shortened_df.insert(loc=col_idx+i, column=name, value=values)
+
+        return shortened_df
+
+
+class DatetimeConversion(Transform):
+    def __init__(self,
+                 dt_column="datetimes", 
+                 yearly="int", 
+                 monthly="sines", 
+                 daily=False, 
+                 hourly="sines", 
+                 add_cosines=True, 
+                 drop_original_column=False):
+
+        super().__init__(dt_column=dt_column, 
+                        yearly=yearly, 
+                        monthly=monthly, 
+                        daily=daily, 
+                        hourly=hourly, 
+                        add_cosines=add_cosines, 
+                        drop_original_column=drop_original_column)
+
+        assert yearly in ["int", False]
+        assert monthly in ["sines", False]
+        assert daily in ["sines", False]
+        assert hourly in ["sines", False]
+        assert isinstance(add_cosines, bool)
+
+    def __call__(self, df):
+        dts = df[self.dt_column].values # grab dtimes
+        dts = [pd.to_datetime(dt) for dt in dts] # convert to pandas datetime format
+
+        dt_df = df.copy(deep=True).iloc[:, :0]  # make deepcopy and only grab index 
+
+        dt_df = DatetimeConversion.add_converted_dt_column(dts=dts, dt_df=dt_df, arg=self.yearly, name="year", base=None, add_cosines=self.add_cosines)
+        dt_df = DatetimeConversion.add_converted_dt_column(dts=dts, dt_df=dt_df, arg=self.monthly, name="month", base=12, add_cosines=self.add_cosines)
+        dt_df = DatetimeConversion.add_converted_dt_column(dts=dts, dt_df=dt_df, arg=self.daily, name="day", base=31, add_cosines=self.add_cosines)
+        dt_df = DatetimeConversion.add_converted_dt_column(dts=dts, dt_df=dt_df, arg=self.hourly, name="hour", base=24, add_cosines=self.add_cosines)
+
+
+        idx = list(df.columns).index(self.dt_column)
+        if self.drop_original_column:
+            df.drop(columns=[self.dt_column], inplace=True)
+
+        for i, c in enumerate(dt_df.columns):
+            v = dt_df[c].values
+
+            df.insert(loc=idx+i, column=c, value=v)
+
+        return df
+
+    @staticmethod
+    def convert_to_sines(values, base):
+        assert isinstance(values, list)
+        assert isinstance(base, int)
+        return [np.sin(2*np.pi*(x)/base) for x in values]
+
+    @staticmethod
+    def convert_to_cosines(values, base):
+        assert isinstance(values, list)
+        assert isinstance(base, int)
+        return [np.cos(2*np.pi*(x)/base) for x in values]
+    
+    @staticmethod
+    def convert_dts_to_ints(dts, attribute):
+        return [getattr(dt, attribute) for dt in dts]
+
+    @staticmethod
+    def add_converted_dt_column(dts, dt_df, arg, name, base, add_cosines):
+        if arg is False:
+            pass
+
+        elif arg == "int":
+            dt_df[f"{name}"] = DatetimeConversion.convert_dts_to_ints(dts, name)
+
+        elif arg == "sines":
+            values = DatetimeConversion.convert_dts_to_ints(dts, name)
+
+            dt_df[f"{name}_sines"] = DatetimeConversion.convert_to_sines(values=values, base=base)
+
+            if add_cosines:
+                dt_df[f"{name}_cosines"] = DatetimeConversion.convert_to_cosines(values=values, base=base)
+
+        else:
+            raise NotImplementedError
+
+        return dt_df
+
+
+class AddWeekends(Transform):
+    def __init__(self):
+        pass
+
+    def __call__(self, df):
+        datetimes = pd.to_datetime(df["datetimes"])
+        weekends = [int(self.is_weekend(dt)) for dt in datetimes]
+
+        df["is_weekend"] = weekends
+
+        return df
+
+    @staticmethod
+    def is_weekend(dt):
+        # 0 through 4 is monday through friday; 5 and 6 indicate saturday and sunday
+        return dt.weekday() >= 5
+
+
+class AddHolidays(Transform):
+    def __init__(self, country="DE"):
+        self._holidays = holidays.country_holidays(country)
+
+    def is_holiday(self, dt):
+        return dt in self._holidays
+
+    def __call__(self, df):
+        datetimes = pd.to_datetime(df["datetimes"])
+        is_holidays = [int(self.is_holiday(dt)) for dt in datetimes]
+        df["is_holiday"] = is_holidays
+        return df
+
+class DropLoadProfileColumns(Transform):
+    def __init__(self):
+        pass
+
+    def __call__(self, df):
+        for c in df.columns:
+            if c.startswith("load_profile"):
+                df = df.drop(columns=[c])
+
+        return df
+
+class DuplicateColumns(Transform):
+    """ Used to duplicate columns; prepends a prefix to the columns name
+    """
+    def __init__(self, prefixes, exclude=[]):
+        self.prefixes = prefixes
+        self.exclude = exclude
+
+    def __call__(self, df):
+        assert all(excl in df.columns for excl in self.exclude)
+
+        new_df = df.iloc[:, :0]
+
+        for c in df.columns:
+            if c in self.exclude:
+                new_df[c] = df[c].copy(deep=True)
+            else:
+                for prefix in self.prefixes:
+                    new_df[f"{prefix}_{c}"] = df[c].copy(deep=True)
+
+        return new_df
+
+
+if __name__ == "__main__":
+    from pathlib import Path
+
+    usable_data_folder = Path(r"C:\Users\Flin\OneDrive - TU Eindhoven\Flin\Flin\01 - Uni\00_Internship\Nokia\data_preperation\data\usable")
+    fn = r"industrial\LoadProfile_20IPs_2016_LG_1.csv"
+    data = pd.read_csv(usable_data_folder / fn, index_col="datetime")
+    data.index = pd.to_datetime(data.index)
+    
+    data["dts"] = [pd.to_datetime(dt) for dt in list(data.index)]
+
+    print(data.head())
+
+    tf1= TimeseriesToRow(df=data, column_name="load_profile", history_window=5)
+    tf2 = DatetimeConversion(df=data, dt_column="dts")
+    pipe = DataPipeline([tf1, tf2])
+
+    out =pipe(data.copy(deep=True))
+    print(out.head())
+    
+    print("Done!")
