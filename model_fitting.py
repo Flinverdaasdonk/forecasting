@@ -16,30 +16,39 @@ if __name__ == "__main__":
     import pandas as pd
     
     print("Start forecasting")
-    tiny_test = False
+    tiny_test = True
+    residential = True
 
     ### PREPARE DATA
-    usable_data_folder = Path(r"C:\Users\Flin\OneDrive - TU Eindhoven\Flin\Flin\01 - Uni\00_Internship\Nokia\00_Programming\data_preparation\data\usable")
-    fn = r"industrial\h=2_industrial_2016_LG_1.csv"  # r"residential\h=2_residential_2018_NO_PV_SFH34_2018.csv"  
+    usable_data_folder = Path(r"C:\Users\Flin\OneDrive - TU Eindhoven\Flin\Flin\01 - Uni\00_Internship\Nokia\00_Programming\forecasting\datasets\train")
+    fn = r"residential_with_pv\h=2_residential_2018_WITH_PV_SFH13_2018.csv" if residential else r"industrial\h=2_industrial_2016_LG_1.csv"
     path = usable_data_folder / fn
 
     df = pd.read_csv(path)
     df = df.iloc[:100] if tiny_test else df
 
+    y = df["y"].values
 
-    ### INITIALIZE MODEL
-    adt = []
-    m = models.CustomProphet(df=df, additional_data_transformations=adt)  # 
-    m.fit()
+    df = df.iloc[:4*24*7*2]
 
+    df.index = [pd.to_datetime(dt) for dt in df["datetimes"].values]
 
-    ### VISUALIZE RESULTS
-    fig, axs = plt.subplots(2, figsize=(8, 8))
-
-    vut.plot_predictions(ax=axs[0], model=m)
-    vut.plot_prediction_error(ax=axs[1], model=m)
-
+    df["y"].plot()
     plt.show()
+
+    # ### INITIALIZE MODEL
+    # adt = []
+    # m = models.CustomProphet(df=df, additional_data_transformations=adt)  # 
+    # m.fit()
+
+
+    # ### VISUALIZE RESULTS
+    # fig, axs = plt.subplots(2, figsize=(8, 8))
+
+    # vut.plot_predictions(ax=axs[0], model=m)
+    # vut.plot_prediction_error(ax=axs[1], model=m)
+
+    # plt.show()
 
 
 

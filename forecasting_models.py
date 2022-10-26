@@ -1,10 +1,11 @@
+from lib2to3.pytree import Base
 from sklearn.ensemble import RandomForestRegressor
 from prophet import Prophet
 import data_utilities as dut
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
-import statsmodels.tsa.statespace.sarimax.SARIMAX as SARIMAX
+import statsmodels.tsa.statespace.sarimax as SARIMAX
 
 class BaseForecaster:
     def __init__(self, df, additional_data_transformations, split):
@@ -162,12 +163,17 @@ class CustomSARIMAX(BaseForecaster):
         y = ...
         return X, y
 
-class CustomRulesBased(BaseForecaster):
+
+class CustomSimpleRulesBased(BaseForecaster):
+    ...
+
+class CustomHWES(BaseForecaster):
+    ...
+
+class CustomVARMAX(BaseForecaster):
     ...
 
 
-
-    
     
 if __name__ == "__main__":
     ...
