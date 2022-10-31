@@ -16,58 +16,48 @@ if __name__ == "__main__":
     import pandas as pd
     
     print("Start forecasting")
-    tiny_test = True
+    tiny_test = False
     residential = True
 
     ### PREPARE DATA
     usable_data_folder = Path(r"C:\Users\Flin\OneDrive - TU Eindhoven\Flin\Flin\01 - Uni\00_Internship\Nokia\00_Programming\forecasting\datasets\train")
-    fn = r"residential_with_pv\h=2_residential_2018_WITH_PV_SFH13_2018.csv" if residential else r"industrial\h=2_industrial_2016_LG_1.csv"
+    fn = r"residential_no_pv\h=2_residential_2018_NO_PV_SFH3_2018.csv" if residential else r"industrial\h=2_industrial_2016_LG_1.csv"
     path = usable_data_folder / fn
 
     df = pd.read_csv(path)
-    df = df.iloc[:100] if tiny_test else df
+    df = df.iloc[:4*24*7*4] if tiny_test else df
 
-    y = df["y"].values
-
-    df = df.iloc[:4*24*7*2]
-
-    df.index = [pd.to_datetime(dt) for dt in df["datetimes"].values]
-
-    df["y"].plot()
-    plt.show()
 
     # ### INITIALIZE MODEL
-    # adt = []
-    # m = models.CustomProphet(df=df, additional_data_transformations=adt)  # 
-    # m.fit()
+    adt = []
+    m = models.CustomRandomForest(df=df, additional_data_transformations=adt)  # 
+    m.fit()
 
 
-    # ### VISUALIZE RESULTS
-    # fig, axs = plt.subplots(2, figsize=(8, 8))
+    ### VISUALIZE RESULTS
+    fig, axs = plt.subplots(2, figsize=(8, 8))
 
-    # vut.plot_predictions(ax=axs[0], model=m)
-    # vut.plot_prediction_error(ax=axs[1], model=m)
+    vut.plot_predictions(ax=axs[0], model=m)
+    vut.plot_prediction_error(ax=axs[1], model=m)
 
-    # plt.show()
+    plt.show()
 
 
 
-    # # plot feature importance
-    # features = list(crf.transformed_data.columns)
-    # del features[features.index("y")]
-    # if "datetimes" in crf.transformed_data.columns:
-    #     del features[features.index("datetimes")]
+    # plot feature importance
+    features = list(m.transformed_data.columns)
+    del features[features.index("y")]
+    if "datetimes" in m.transformed_data.columns:
+        del features[features.index("datetimes")]
 
-    # importances = crf.model.feature_importances_
+    importances = m.model.feature_importances_
 
-    # assert len(features) == len(importances)
-    # d = {f:i for f, i in zip(features, importances)}
+    assert len(features) == len(importances)
+    d = {f:i for f, i in zip(features, importances)}
 
-    # plt.barh(features, importances)
-    # plt.show()
+    plt.barh(features, importances)
+    plt.show()
 
-    # assert len(y) == len(yhat)
-    
 
-    # print("Done!")
+    print("Done!")
 
