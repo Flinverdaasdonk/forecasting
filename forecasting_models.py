@@ -71,7 +71,8 @@ class CustomRandomForest(BaseForecaster):
     def get_base_transformations(self):
         base_transforms = [dut.TimeseriesToRow(column_name=self.ts2row_column_name, 
                 history_window=self.ts2row_history_window), 
-                dut.DatetimeConversion()]
+                dut.DatetimeConversion(),
+                dut.AddYesterdaysValue(h=2), dut.AddLastWeeksValue(h=2), dut.DropNaNs()]
         return base_transforms
 
     def fit(self):
@@ -144,13 +145,19 @@ class CustomProphet(BaseForecaster):
         yhat = forecast["yhat"].values
         return yhat
 
+
 class CustomSARIMAX(BaseForecaster):
     def __init__(self, df, additional_data_transformations, split=0.75, **kwargs):
         super().__init__(df, additional_data_transformations=additional_data_transformations, split=split)
         self.model = SARIMAX(**kwargs)
 
+        self.post_init()
+
     def get_base_transformations(self):
-        ...
+        base_transforms = [dut.AddWeekends(), 
+                            dut.AddHolidays(),
+                dut.DatetimeConversion()]
+        return base_transforms
 
     def fit(self):
         ...
@@ -165,13 +172,35 @@ class CustomSARIMAX(BaseForecaster):
 
 
 class CustomSimpleRulesBased(BaseForecaster):
-    ...
+    def __init__(self, df, additional_data_transformations, split):
+        super().__init__(df, additional_data_transformations, split)
+        self.post_init()
 
-class CustomHWES(BaseForecaster):
-    ...
+    def get_base_transformations(self):
+        base_transforms = [dut.AddLastWeeksValue(),
+        dut.DropNaNs(),
+        dut.OnlyKeepSpecificColumns(columns="last_weeks_y")
+        ]
+        return base_transforms
 
-class CustomVARMAX(BaseForecaster):
-    ...
+    def fit(self):
+        pass
+
+    def predict(self, X):
+        yhat = X["last_weeks_y"].values
+        return yhat
+
+    def final_preprocessing_data(self, df):
+        X = ...
+        y = ...
+        return X, y
+
+
+# class CustomHWES(BaseForecaster):
+#     ...
+
+# class CustomVARMAX(BaseForecaster):
+#     ...
 
 
     
