@@ -245,6 +245,81 @@ class DuplicateColumns(Transform):
 
         return new_df
 
+class AddYesterdaysValue(Transform):
+    def __init__(self, h, column="y", convolve=True):
+        self.h = h
+        self.column = column
+        self.convolve = convolve
+
+    def __call__(self, df):
+        dts = [pd.to_datetime(dt) for dt in df["datetimes"].values]
+        td = (dts[1] - dts[0]).total_seconds()
+
+        n_rows_in_horizon = int(self.h*3600 / td)
+        n_rows_per_day = int(24*3600 / td)
+        n_rows_offset = n_rows_per_day - n_rows_in_horizon
+
+        target = list(df[self.column].values)[:-n_rows_offset]
+
+        if self.convolve:
+            weights = [2] + [3]*(len(target)-2) + [2]
+            target = np.convolve(target, [1,1,1], "same")/np.array(weights)
+            target = list(target)
+
+        values = [np.nan]*n_rows_offset + target
+
+
+        df[f"yesterdays_{self.column}"] = values
+
+        return df
+
+class AddLastWeeksValue(Transform):
+    def __init__(self, h, column="y", convolve=True):
+        self.h = h
+        self.column = column
+        self.convolve = convolve
+
+    def __call__(self, df):
+        dts = [pd.to_datetime(dt) for dt in df["datetimes"].values]
+        td = (dts[1] - dts[0]).total_seconds()
+
+        n_rows_in_horizon = int(self.h*3600 / td)
+        n_rows_per_week = int(7*24*3600 / td)
+        n_rows_offset = n_rows_per_week - n_rows_in_horizon
+
+        target = list(df[self.column].values)[:-n_rows_offset]
+
+        if self.convolve:
+            weights = [2] + [3]*(len(target)-2) + [2]
+            target = np.convolve(target, [1,1,1], "same")/np.array(weights)
+            target = list(target)
+
+        values = [np.nan]*n_rows_offset + target
+
+
+        df[f"last_weeks_{self.column}"] = values
+
+        return df
+
+class DropNaNs(Transform):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def __call__(self, df):
+        return df.dropna()
+
+class OnlyKeepSpecificColumns(Transform):
+    def __init__(self, columns, **kwargs):
+        super().__init__(**kwargs)
+        if not isinstance(columns, list):
+            assert isinstance(columns, str)
+            columns = [columns]
+        
+        self.columns = columns
+
+    def __call__(self, df):
+        return df[self.columns]
+
 
 if __name__ == "__main__":
     from pathlib import Path
