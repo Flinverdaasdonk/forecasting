@@ -249,6 +249,7 @@ class AddYesterdaysValue(Transform):
     def __init__(self, h, column="y", convolve=True):
         self.h = h
         self.column = column
+        
         self.convolve = convolve
 
     def __call__(self, df):

@@ -72,7 +72,9 @@ class CustomRandomForest(BaseForecaster):
         base_transforms = [dut.TimeseriesToRow(column_name=self.ts2row_column_name, 
                 history_window=self.ts2row_history_window), 
                 dut.DatetimeConversion(),
-                dut.AddYesterdaysValue(h=2), dut.AddLastWeeksValue(h=2), dut.DropNaNs()]
+                dut.AddYesterdaysValue(h=2), 
+                dut.AddLastWeeksValue(h=2), 
+                dut.DropNaNs()]
         return base_transforms
 
     def fit(self):
@@ -149,45 +151,58 @@ class CustomProphet(BaseForecaster):
 class CustomSARIMAX(BaseForecaster):
     def __init__(self, df, additional_data_transformations, split=0.75, **kwargs):
         super().__init__(df, additional_data_transformations=additional_data_transformations, split=split)
-        self.model = SARIMAX(**kwargs)
-
+    
         self.post_init()
+        X, y = self.final_preprocessing_data(self.train_data)
+
+        self.model = SARIMAX(endog=y, exog=X, order=(1,1,1), seasonal_order=(0,1,0,4*24), **kwargs)
 
     def get_base_transformations(self):
         base_transforms = [dut.AddWeekends(), 
                             dut.AddHolidays(),
-                dut.DatetimeConversion()]
+                            dut.AddLastWeeksValue(h=2),
+                            dut.addYesterdaysValue(h=2),
+                dut.DatetimeConversion(),
+                dut.dut.DropNaNs()]
         return base_transforms
 
     def fit(self):
-        ...
+        self.fitted_model_parameters = self.model.fit()
 
-    def predict(self, X):
-        ...
+
+    def predict(self, data=None):
+        if data is None:
+            X, _ = self.final_preprocessing_data(df=self.test_data)
+        else:
+            X, _ = self.final_preprocessing_data(df=data)
+
+        return self.fitted_model_parameters.predict(exog=X)
 
     def final_preprocessing_data(self, df):
-        X = ...
-        y = ...
+        y = df["y"].values
+        X = df.drop(columns=["y"]).to_numpy()
         return X, y
 
 
 class CustomSimpleRulesBased(BaseForecaster):
-    def __init__(self, df, additional_data_transformations, split):
+    def __init__(self, df, additional_data_transformations, split=0.75):
         super().__init__(df, additional_data_transformations, split)
         self.post_init()
 
     def get_base_transformations(self):
-        base_transforms = [dut.AddLastWeeksValue(),
+        base_transforms = [dut.AddLastWeeksValue(h=2),
         dut.DropNaNs(),
-        dut.OnlyKeepSpecificColumns(columns="last_weeks_y")
+        dut.OnlyKeepSpecificColumns(columns=["last_weeks_y", "y"])
         ]
         return base_transforms
 
     def fit(self):
         pass
 
-    def predict(self, X):
-        yhat = X["last_weeks_y"].values
+    def predict(self, data=None):
+        if data is None:
+            data = self.test_data
+        yhat = data["last_weeks_y"].values
         return yhat
 
     def final_preprocessing_data(self, df):

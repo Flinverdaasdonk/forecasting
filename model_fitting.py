@@ -30,7 +30,8 @@ if __name__ == "__main__":
 
     # ### INITIALIZE MODEL
     adt = []
-    m = models.CustomRandomForest(df=df, additional_data_transformations=adt)  # 
+    # m = models.CustomRandomForest(df=df, additional_data_transformations=adt)  # 
+    m = models.CustomSimpleRulesBased(df=df, additional_data_transformations=adt)
     m.fit()
 
 
@@ -43,21 +44,22 @@ if __name__ == "__main__":
     plt.show()
 
 
+    if isinstance(m, models.CustomRandomForest):
 
-    # plot feature importance
-    features = list(m.transformed_data.columns)
-    del features[features.index("y")]
-    if "datetimes" in m.transformed_data.columns:
-        del features[features.index("datetimes")]
+        # plot feature importance
+        features = list(m.transformed_data.columns)
+        del features[features.index("y")]
+        if "datetimes" in m.transformed_data.columns:
+            del features[features.index("datetimes")]
 
-    importances = m.model.feature_importances_
+        importances = m.model.feature_importances_
 
-    assert len(features) == len(importances)
-    d = {f:i for f, i in zip(features, importances)}
+        assert len(features) == len(importances)
+        d = {f:i for f, i in zip(features, importances)}
 
-    plt.barh(features, importances)
-    plt.show()
+        plt.barh(features, importances)
+        plt.show()
 
 
-    print("Done!")
+        print("Done!")
 
