@@ -16,7 +16,7 @@ if __name__ == "__main__":
     import pandas as pd
     
     print("Start forecasting")
-    tiny_test = False
+    tiny_test = True
     residential = True
 
     ### PREPARE DATA
@@ -31,7 +31,7 @@ if __name__ == "__main__":
     # ### INITIALIZE MODEL
     adt = []
     # m = models.CustomRandomForest(df=df, additional_data_transformations=adt)  # 
-    m = models.CustomSimpleRulesBased(df=df, additional_data_transformations=adt)
+    m = models.CustomSARIMAX(df=df, additional_data_transformations=adt)
     m.fit()
 
 

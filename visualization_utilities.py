@@ -9,9 +9,12 @@ def plot_predictions(ax, model):
     yhat_test = list(model.predict())
     yhat = yhat_train + yhat_test
 
+    #y = y[:-len(yhat)]
+
     ax.set_title(f"{model.name}: Prediction Error")
 
     x = model.get_corresponding_dts(df=model.transformed_data)
+    #x = model.get_corresponding_dts(df=model.transformed_data)[:-len(yhat)]
 
     ax.plot(x,y, label="y")
     ax.plot(x, yhat, label="yhat")
@@ -31,9 +34,11 @@ def plot_prediction_error(ax, model):
     yhat_test = list(model.predict())
     yhat = yhat_train + yhat_test
 
+    y = y[:-len(yhat)]
+
     # calculate error
     delta = [_y - _yh for _y, _yh in zip(y, yhat)]
-    x = model.get_corresponding_dts(df=model.transformed_data)
+    x = model.get_corresponding_dts(df=model.transformed_data)[:-len(yhat)]
 
 
     ax.set_title(f"{model.name}: Prediction Error")

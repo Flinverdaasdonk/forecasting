@@ -5,7 +5,7 @@ import data_utilities as dut
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
-import statsmodels.tsa.statespace.sarimax as SARIMAX
+from statsmodels.tsa.statespace.sarimax import SARIMAX
 
 class BaseForecaster:
     def __init__(self, df, additional_data_transformations, split):
@@ -22,7 +22,7 @@ class BaseForecaster:
 
         self.index_to_dts = {i: dt for i, dt in zip(list(self.initial_data.index), list(self.initial_data["datetimes"].values))}
 
-        assert 0 < split <= 1
+        assert 0 < split < 1
         self.split = split
 
     def post_init(self):
@@ -161,13 +161,13 @@ class CustomSARIMAX(BaseForecaster):
         base_transforms = [dut.AddWeekends(), 
                             dut.AddHolidays(),
                             dut.AddLastWeeksValue(h=2),
-                            dut.addYesterdaysValue(h=2),
-                dut.DatetimeConversion(),
-                dut.dut.DropNaNs()]
+                            dut.AddYesterdaysValue(h=2),
+                dut.DatetimeConversion(drop_original_column=True),
+                dut.DropNaNs()]
         return base_transforms
 
     def fit(self):
-        self.fitted_model_parameters = self.model.fit()
+        self.fitted_model_parameters = self.model.fit(disp=False, maxiter=5)
 
 
     def predict(self, data=None):
