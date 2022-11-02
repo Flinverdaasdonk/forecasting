@@ -120,7 +120,7 @@ class DatetimeConversion(Transform):
         assert isinstance(add_cosines, bool)
 
     def __call__(self, df):
-        dts = df[self.dt_column].values # grab dtimes
+        dts = df[self.dt_column] # grab dtimes
 
         dt_df = df.copy(deep=True).iloc[:, :0]  # make deepcopy and only grab index 
 
@@ -245,7 +245,7 @@ class AddYesterdaysValue(Transform):
         self.convolve = convolve
 
     def __call__(self, df):
-        td = (df["datetimes"][1] - df["datetimes"][0]).total_seconds()
+        td = (df["datetimes"].iloc[1] - df["datetimes"].iloc[0]).total_seconds()
 
         n_rows_in_horizon = int(self.h*3600 / td)
         n_rows_per_day = int(24*3600 / td)
@@ -272,7 +272,7 @@ class AddLastWeeksValue(Transform):
         self.convolve = convolve
 
     def __call__(self, df):
-        td = (df["datetimes"][1] - df["datetimes"][0]).total_seconds()
+        td = (df["datetimes"].iloc[1] - df["datetimes"].iloc[0]).total_seconds()
 
         n_rows_in_horizon = int(self.h*3600 / td)
         n_rows_per_week = int(7*24*3600 / td)

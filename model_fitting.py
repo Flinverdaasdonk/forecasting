@@ -33,7 +33,7 @@ if __name__ == "__main__":
     # ### INITIALIZE MODEL
     adt = []
     # m = models.CustomRandomForest(df=df, additional_data_transformations=adt)  # 
-    m = models.CustomRandomForest(df=df, h=h, additional_data_transformations=adt)
+    m = models.CustomRandomForest(df=df, h=h, additional_df_transformations=adt)
     m.fit()
 
 

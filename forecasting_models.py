@@ -113,7 +113,7 @@ class CustomRandomForest(BaseForecaster):
 
         return X_df, y_series
 
-    def predict(self, predict_on_test=True, rolling_prediction=True):
+    def predict(self, predict_on_test=True, rolling_prediction=False):
         if rolling_prediction:
             assert predict_on_test
             self.rolling_predict()
