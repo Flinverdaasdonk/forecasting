@@ -21,8 +21,11 @@ class BaseForecaster:
         self.initial_df = df.copy(deep=True)
         self.initial_df["datetimes"] = [pd.to_datetime(dt) for dt in self.initial_df["datetimes"]]
 
-        self.index_to_dts = {i: dt for i, dt in zip(list(self.initial_df.index), list(self.initial_df["datetimes"].values))}
 
+        self.index_to_dts = {i: dt for i, dt in zip(list(self.initial_df.index), list(self.initial_df["datetimes"]))}
+
+        dts = self.initial_df["datetimes"]
+        assert str(type(dts[0])) == "<class 'pandas._libs.tslibs.timestamps.Timestamp'>"
         assert 0 < split < 1
         self.split = split
 
@@ -37,6 +40,9 @@ class BaseForecaster:
         n = int(self.split*len(self.transformed_df))
         self.train_df = self.transformed_df.iloc[:n]
         self.test_df = self.transformed_df.iloc[n:] 
+
+        X_df, _ = self.final_df_preprocessing(df=self.transformed_df)
+        self.features = list(X_df.columns)
 
     def get_data_transformations(self):
         return self.get_base_transformations() + self.additional_df_transformations
@@ -55,11 +61,13 @@ class BaseForecaster:
         return dts   
 
     def check_consecutive_datetimes(self):
-        dts = self.initial_df["datetimes"].values
-        tds = [(dt1 - dt0).astype('float64')/1e9 for dt1, dt0 in zip(dts[1:], dts[:-1])]
+        dts = self.initial_df["datetimes"]
+        tds = [(dt1 - dt0).total_seconds() for dt1, dt0 in zip(dts[1:], dts[:-1])]
 
         assert all(td == tds[0] for td in tds), f"The timedeltas between consecutive steps is inconsistent" 
 
+    def final_df_preprocessing(self, df):
+        raise NotImplementedError
 
     def fit(self):
         raise NotImplementedError
@@ -88,29 +96,29 @@ class CustomRandomForest(BaseForecaster):
         return base_transforms
 
     def fit(self):
-        X, y = self.final_df_preprocessing(df=self.train_df)
+        X_df, y_series = self.final_df_preprocessing(df=self.train_df)
+
+        X = X_df.to_numpy()
+        y = y_series.values
+
         self.model.fit(X, y)
 
     def final_df_preprocessing(self, df):
-        X = df.copy(deep=True)
-        if "y" in X.columns:
-            y = X["y"].values
-            X = X.drop(columns=["y"])
+        X_df = df.copy(deep=True)
+
+        y_series = X_df["y"]
+        X_df = X_df.drop(columns=["y"])
+
+        X_df = X_df.drop(columns=["datetimes"])
+        return X_df, y_series
+
+    def predict(self, predict_on_test=True):
+        if predict_on_test:
+            X_df, _ = self.final_df_preprocessing(df=self.test_df)
         else:
-            y = None
+            X_df, _ = self.final_df_preprocessing(df=self.train_df)
 
-        if "datetimes" in X.columns:
-            X = X.drop(columns=["datetimes"])
-
-        X = X.to_numpy()
-        return X, y
-
-    def predict(self, df=None):
-        if df is None:
-            X, _ = self.final_df_preprocessing(df=self.test_df)
-        else:
-            X, _ = self.final_df_preprocessing(df=df)
-
+        X = X_df.to_numpy()
         return self.model.predict(X)
 
 
@@ -132,7 +140,11 @@ class CustomProphet(BaseForecaster):
         return base_transforms
 
     def fit(self):
-        df = self.final_df_preprocessing(df=self.train_df)
+        X_df, y_series = self.final_df_preprocessing(df=self.train_df)
+
+        df = X_df.copy(deep=True)
+        df["y"] = y_series
+        
         self.model.fit(df)
 
     def final_df_preprocessing(self, df):
@@ -142,16 +154,18 @@ class CustomProphet(BaseForecaster):
             df.rename(columns={"datetimes": "ds"}, inplace=True)
 
         assert "ds" in df.columns
-        return df
+        X_df = df.drop(columns=["ds"])
+        y_series = df["y"]
+        return X_df, y_series
 
-    def predict(self, df=None):
-        if df is None:
-            df = self.final_df_preprocessing(df=self.test_df)
+    def predict(self, predict_on_test=True):
+        if predict_on_test:
+            X_df, y_series = self.final_df_preprocessing(df=self.test_df)
         else:
-            df  = self.final_df_preprocessing(df=df)
+            X_df, y_series = self.final_df_preprocessing(df=self.train_df)
 
-        if "y" in df.columns:
-            df = df.drop(columns=["y"])
+        df = X_df.copy(deep=True)
+        df["y"] = y_series
 
         forecast = self.model.predict(df)
         yhat = forecast["yhat"].values
@@ -165,8 +179,8 @@ class CustomSARIMAX(BaseForecaster):
         self.post_init()
         X, y = self.final_df_preprocessing(self.train_df)
 
-        dt0, dt1 = self.initial_df["datetimes"].values[0], self.initial_df["datetimes"].values[0]
-        td_between_rows = (dt1-dt0).astype('float64')/1E9  # convert ns to s
+        dt0, dt1 = self.initial_df["datetimes"][0], self.initial_df["datetimes"][1]
+        td_between_rows = (dt1-dt0).total_seconds()  # convert ns to s
 
         samples_per_day = int(24*3600 / td_between_rows)
 
@@ -185,18 +199,20 @@ class CustomSARIMAX(BaseForecaster):
         self.fitted_model_parameters = self.model.fit(disp=False, maxiter=5)
 
 
-    def predict(self, df=None):
-        if df is None:
-            X, _ = self.final_df_preprocessing(df=self.test_df)
+    def predict(self, predict_on_test=True):
+        if predict_on_test:
+            X_df, y_series = self.final_df_preprocessing(df=self.test_df)
         else:
-            X, _ = self.final_df_preprocessing(df=df)
+            X_df, y_series = self.final_df_preprocessing(df=self.train_df)
+
+        X = X_df.to_numpy()
 
         return self.fitted_model_parameters.predict(exog=X)
 
     def final_df_preprocessing(self, df):
-        y = df["y"].values
-        X = df.drop(columns=["y"]).to_numpy()
-        return X, y
+        y_series = df["y"]
+        X_df = df.drop(columns=["y"])
+        return X_df, y_series
 
 
 class CustomSimpleRulesBased(BaseForecaster):
@@ -214,16 +230,21 @@ class CustomSimpleRulesBased(BaseForecaster):
     def fit(self):
         pass
 
-    def predict(self, df=None):
-        if df is None:
-            df = self.test_df
-        yhat = df["last_weeks_y"].values
+
+    def predict(self, predict_on_test=True):
+        if predict_on_test:
+            X_df, y_series = self.final_df_preprocessing(df=self.test_df)
+        else:
+            X_df, y_series = self.final_df_preprocessing(df=self.train_df)
+
+        yhat = X_df["last_weeks_y"].values
         return yhat
 
     def final_df_preprocessing(self, df):
-        X = ...
-        y = ...
-        return X, y
+        y_series = df["y"]
+        X_df = df.drop(columns="y")
+        
+        return X_df, y_series
 
 
 # class CustomHWES(BaseForecaster):

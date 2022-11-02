@@ -104,16 +104,14 @@ class DatetimeConversion(Transform):
                  monthly="sines", 
                  daily=False, 
                  hourly="sines", 
-                 add_cosines=True, 
-                 drop_original_column=False):
+                 add_cosines=True):
 
         super().__init__(dt_column=dt_column, 
                         yearly=yearly, 
                         monthly=monthly, 
                         daily=daily, 
                         hourly=hourly, 
-                        add_cosines=add_cosines, 
-                        drop_original_column=drop_original_column)
+                        add_cosines=add_cosines)
 
         assert yearly in ["int", False]
         assert monthly in ["sines", False]
@@ -123,7 +121,6 @@ class DatetimeConversion(Transform):
 
     def __call__(self, df):
         dts = df[self.dt_column].values # grab dtimes
-        dts = [pd.to_datetime(dt) for dt in dts] # convert to pandas datetime format
 
         dt_df = df.copy(deep=True).iloc[:, :0]  # make deepcopy and only grab index 
 
@@ -132,10 +129,7 @@ class DatetimeConversion(Transform):
         dt_df = DatetimeConversion.add_converted_dt_column(dts=dts, dt_df=dt_df, arg=self.daily, name="day", base=31, add_cosines=self.add_cosines)
         dt_df = DatetimeConversion.add_converted_dt_column(dts=dts, dt_df=dt_df, arg=self.hourly, name="hour", base=24, add_cosines=self.add_cosines)
 
-
         idx = list(df.columns).index(self.dt_column)
-        if self.drop_original_column:
-            df.drop(columns=[self.dt_column], inplace=True)
 
         for i, c in enumerate(dt_df.columns):
             v = dt_df[c].values
@@ -187,8 +181,7 @@ class AddWeekends(Transform):
         pass
 
     def __call__(self, df):
-        datetimes = pd.to_datetime(df["datetimes"])
-        weekends = [int(self.is_weekend(dt)) for dt in datetimes]
+        weekends = [int(self.is_weekend(dt)) for dt in df["datetimes"]]
 
         df["is_weekend"] = weekends
 
@@ -208,8 +201,7 @@ class AddHolidays(Transform):
         return dt in self._holidays
 
     def __call__(self, df):
-        datetimes = pd.to_datetime(df["datetimes"])
-        is_holidays = [int(self.is_holiday(dt)) for dt in datetimes]
+        is_holidays = [int(self.is_holiday(dt)) for dt in df["datetimes"]]
         df["is_holiday"] = is_holidays
         return df
 
@@ -253,8 +245,7 @@ class AddYesterdaysValue(Transform):
         self.convolve = convolve
 
     def __call__(self, df):
-        dts = [pd.to_datetime(dt) for dt in df["datetimes"].values]
-        td = (dts[1] - dts[0]).total_seconds()
+        td = (df["datetimes"][1] - df["datetimes"][0]).total_seconds()
 
         n_rows_in_horizon = int(self.h*3600 / td)
         n_rows_per_day = int(24*3600 / td)
@@ -281,8 +272,7 @@ class AddLastWeeksValue(Transform):
         self.convolve = convolve
 
     def __call__(self, df):
-        dts = [pd.to_datetime(dt) for dt in df["datetimes"].values]
-        td = (dts[1] - dts[0]).total_seconds()
+        td = (df["datetimes"][1] - df["datetimes"][0]).total_seconds()
 
         n_rows_in_horizon = int(self.h*3600 / td)
         n_rows_per_week = int(7*24*3600 / td)

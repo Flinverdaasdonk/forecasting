@@ -20,8 +20,10 @@ if __name__ == "__main__":
     residential = False
 
     ### PREPARE DATA
+    h = 2
     usable_data_folder = Path(r"C:\Users\Flin\OneDrive - TU Eindhoven\Flin\Flin\01 - Uni\00_Internship\Nokia\00_Programming\forecasting\datasets\train")
-    fn = r"residential_no_pv\h=2_residential_2018_NO_PV_SFH3_2018.csv" if residential else r"industrial\h=2_industrial_2016_LG_1.csv"
+
+    fn = f"residential_no_pv\\h={h}_residential_2018_NO_PV_SFH3_2018.csv" if residential else f"industrial\\h={h}_industrial_2016_LG_1.csv"
     path = usable_data_folder / fn
 
     df = pd.read_csv(path)
@@ -31,7 +33,7 @@ if __name__ == "__main__":
     # ### INITIALIZE MODEL
     adt = []
     # m = models.CustomRandomForest(df=df, additional_data_transformations=adt)  # 
-    m = models.CustomRandomForest(df=df, additional_data_transformations=adt)
+    m = models.CustomRandomForest(df=df, h=h, additional_data_transformations=adt)
     m.fit()
 
 
