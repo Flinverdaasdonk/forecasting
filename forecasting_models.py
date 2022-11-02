@@ -30,6 +30,7 @@ class BaseForecaster:
         self.split = split
 
         self.check_consecutive_datetimes()
+        self.rolling_predict_rows_to_refit = int(24*3600 / dut.get_timedelta(df=self.initial_df))
 
     def post_init(self):
         self.name = self.__class__.__name__
@@ -72,7 +73,7 @@ class BaseForecaster:
     def fit(self):
         raise NotImplementedError
 
-    def predict(self, predict_on_test=True, rolling_forecast=False):
+    def predict(self, predict_on_test=True, rolling_prediction=False):
         raise NotImplementedError
 
 

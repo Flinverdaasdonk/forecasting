@@ -48,7 +48,7 @@ if __name__ == "__main__":
     if isinstance(m, models.CustomRandomForest):
 
         # plot feature importance
-        features = list(m.transformed_data.columns)
+        features = m.features
         del features[features.index("y")]
         if "datetimes" in m.transformed_data.columns:
             del features[features.index("datetimes")]

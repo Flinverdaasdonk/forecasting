@@ -4,7 +4,7 @@ def get_y(model):
 
 def get_yhat(model):
     yhat_train = list(model.predict(predict_on_test=False))
-    yhat_test = list(model.predict(predict_on_test=True))
+    yhat_test = list(model.predict(predict_on_test=True, rolling_prediction=True))
     yhat = yhat_train + yhat_test
     return yhat
 
