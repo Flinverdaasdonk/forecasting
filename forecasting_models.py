@@ -72,13 +72,14 @@ class BaseForecaster:
     def fit(self):
         raise NotImplementedError
 
-    def predict(self, df=None):
+    def predict(self, predict_on_test=True, rolling_forecast=True):
         raise NotImplementedError
 
 
 class CustomRandomForest(BaseForecaster):
     def __init__(self, df, h, additional_df_transformations=None, split=0.75, **kwargs):
         super().__init__(df, h, additional_df_transformations=additional_df_transformations, split=split)
+        self.kwargs = kwargs
         self.model = RandomForestRegressor(**kwargs)
 
         self.ts2row_history_window = 5
@@ -112,7 +113,10 @@ class CustomRandomForest(BaseForecaster):
 
         return X_df, y_series
 
-    def predict(self, predict_on_test=True):
+    def predict(self, predict_on_test=True, rolling_prediction=True):
+        if rolling_prediction:
+            assert predict_on_test
+            self.rolling_predict()
         if predict_on_test:
             X_df, _ = self.final_df_preprocessing(df=self.test_df)
         else:
@@ -120,6 +124,47 @@ class CustomRandomForest(BaseForecaster):
 
         X = X_df.to_numpy()
         return self.model.predict(X)
+
+    def rolling_predict(self):
+        train_X_df, train_y_series = self.final_df_preprocessing(df=self.test_df)
+        test_X_df, test_y_series = self.final_df_preprocessing(df=self.test_df)
+
+        n = self.rolling_predict_rows_to_refit
+        iterations = len(test_X_df) // n
+
+        extended_train_X_df = train_X_df
+        extended_train_y_series = train_y_series
+        yhat = []
+
+        new_model = self.model
+        for i in range(iterations):
+
+            # grab data corresponding to this rolling window
+            sub_test_X_df = test_X_df.iloc[i*n:(i+1)*n]
+            sub_test_y_series = test_y_series.iloc[i*n:(i+1)*n]
+
+            # do forecast
+            sub_test_X = sub_test_X_df.to_numpy()
+            sub_yhat = list(new_model.predict(sub_test_X))
+            yhat.extend(sub_yhat)
+
+            # extend the training data
+            extended_train_X_df = extended_train_X_df.append(sub_test_X_df)
+            extended_train_y_series = extended_train_y_series.append(sub_test_y_series)
+
+            # initialize the new model
+            new_model = RandomForestRegressor(**self.kwargs)
+
+            # prepare data for the new model
+            new_X = extended_train_X_df.to_numpy()
+            new_y = extended_train_y_series.values
+
+            # fit the new model
+            new_model.fit(new_X, new_y)
+
+
+        return yhat
+
 
 
 class CustomProphet(BaseForecaster):
@@ -158,7 +203,7 @@ class CustomProphet(BaseForecaster):
         y_series = df["y"]
         return X_df, y_series
 
-    def predict(self, predict_on_test=True):
+    def predict(self, predict_on_test=True, rolling_forecast=True):
         if predict_on_test:
             X_df, y_series = self.final_df_preprocessing(df=self.test_df)
         else:
@@ -199,11 +244,13 @@ class CustomSARIMAX(BaseForecaster):
         self.fitted_model_parameters = self.model.fit(disp=False, maxiter=5)
 
 
-    def predict(self, predict_on_test=True):
+    def predict(self, predict_on_test=True, rolling_forecast=True):
         if predict_on_test:
             X_df, y_series = self.final_df_preprocessing(df=self.test_df)
         else:
+            assert rolling_forecast is False 
             X_df, y_series = self.final_df_preprocessing(df=self.train_df)
+
 
         X = X_df.to_numpy()
 
@@ -231,7 +278,7 @@ class CustomSimpleRulesBased(BaseForecaster):
         pass
 
 
-    def predict(self, predict_on_test=True):
+    def predict(self, predict_on_test=True, rolling_forecast=True):
         if predict_on_test:
             X_df, y_series = self.final_df_preprocessing(df=self.test_df)
         else:
