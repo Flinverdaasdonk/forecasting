@@ -30,7 +30,7 @@ class BaseForecaster:
         self.split = split
 
         self.check_consecutive_datetimes()
-        self.rolling_predict_rows_to_refit = int(24*3600 / dut.get_timedelta(df=self.initial_df))
+        self.rolling_predict_rows_to_refit = int(2*24*3600 / dut.get_timedelta(df=self.initial_df))
 
     def post_init(self):
         self.name = self.__class__.__name__
@@ -149,7 +149,7 @@ class CustomRandomForest(BaseForecaster):
         test_X_df, test_y_series = self.final_df_preprocessing(df=self.test_df)
 
         n = self.rolling_predict_rows_to_refit
-        iterations = len(test_X_df) // n
+        iterations = np.ceil(len(test_X_df) / n).astype(int)
 
         extended_train_X_df = train_X_df
         extended_train_y_series = train_y_series
@@ -242,7 +242,7 @@ class CustomProphet(BaseForecaster):
         test_X_df, test_y_series = self.final_df_preprocessing(df=self.test_df)
 
         n = self.rolling_predict_rows_to_refit
-        iterations = len(test_X_df) // n
+        iterations = np.ceil(len(test_X_df) / n).astype(int)
 
         extended_train_X_df = train_X_df
         extended_train_y_series = train_y_series
@@ -319,29 +319,33 @@ class CustomSARIMAX(BaseForecaster):
 
         if predict_on_test:
             X_df, y_series = self.final_df_preprocessing(df=self.test_df)
+            X = X_df.to_numpy()
+            y = self.fitted_model_parameters.forecast(steps=len(X), exog=X)
         else:
             assert rolling_prediction is False 
-            X_df, y_series = self.final_df_preprocessing(df=self.train_df)
 
+            y = self.fitted_model_parameters.predict()
 
-        X = X_df.to_numpy()
-        y = self.fitted_model_parameters.predict(exog=X)
-        foo=1
         return y
 
     def final_df_preprocessing(self, df):
+        df = df.copy(deep=True)
         y_series = df["y"]
-        X_df = df.drop(columns=["datetimes", "y"])
+        X_df = df.drop(columns=["y"])
+
+        if "datetimes" in X_df.columns:
+            X_df = X_df.drop(columns=["datetimes"])
+
         return X_df, y_series
 
 
     def rolling_predict(self):
         print("Inside Rolling Predict")
-        train_X_df, train_y_series = self.final_df_preprocessing(df=self.test_df)
+        train_X_df, train_y_series = self.final_df_preprocessing(df=self.train_df)
         test_X_df, test_y_series = self.final_df_preprocessing(df=self.test_df)
 
         n = self.rolling_predict_rows_to_refit
-        iterations = len(test_X_df) // n
+        iterations = np.ceil(len(test_X_df) / n).astype(int)
 
         extended_train_X_df = train_X_df
         extended_train_y_series = train_y_series
@@ -356,17 +360,17 @@ class CustomSARIMAX(BaseForecaster):
 
             # do forecast
             sub_test_X = sub_test_X_df.to_numpy()
-            sub_yhat = list(new_fitted_model.predict(exog=sub_test_X))
+            sub_yhat = list(new_fitted_model.forecast(steps=len(sub_test_X), exog=sub_test_X))
             yhat.extend(sub_yhat)
 
             # extend the training data
             extended_train_X_df = extended_train_X_df.append(sub_test_X_df)
             extended_train_y_series = extended_train_y_series.append(sub_test_y_series)
 
-            extended_df = extended_trai_X_df.copy(deep=True)
+            extended_df = extended_train_X_df.copy(deep=True)
             extended_df["y"] = extended_train_y_series
             # initialize the new model
-            new_model = self.make_model(df)
+            new_model = self.make_model(extended_df)
 
             # fit the new model
             new_fitted_model = new_model.fit(disp=False, maxiter=self.max_iter)

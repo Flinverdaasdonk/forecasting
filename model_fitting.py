@@ -27,7 +27,7 @@ if __name__ == "__main__":
     path = usable_data_folder / fn
 
     df = pd.read_csv(path)
-    df = df.iloc[4*24*7:4*24*7*3] if tiny_test else df
+    df = df.iloc[4*24*7*2:4*24*7*6] if tiny_test else df
 
 
     # ### INITIALIZE MODEL
@@ -38,7 +38,7 @@ if __name__ == "__main__":
 
     ### VISUALIZE RESULTS
     
-    vut.basic_plot()
+    vut.basic_plot(model=m)
 
 
 

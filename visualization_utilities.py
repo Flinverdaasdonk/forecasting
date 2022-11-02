@@ -1,3 +1,5 @@
+import matplotlib.pyplot as plt
+
 ROLLING_PREDICTION = False
 
 def get_y(model):
@@ -14,17 +16,52 @@ def get_x(model):
     x = model.get_corresponding_dts(df=model.transformed_df)
     return x
 
-def plot_predictions(ax, model):
+def calc_features(model, x=True, y=True, yhat=True, delta=True):
+    results = {}
+
+    # grab x
+    results["x"] = get_x(model) if x else None
+
     # grab actual y
-    y = get_y(model)
+    results["y"] = get_y(model) if y else None
     
     # grab yhat
-    yhat = get_yhat(model)
+
+    results["yhat"] = get_yhat(model) if yhat else None
+
+    # delta
+    if delta:
+        if y and yhat:
+            d = [_y - _yh for _y, _yh in zip(results["y"], results["yhat"])]
+        else:
+            print(f"Can't calculate delta, y={y}, yhat={yhat}")
+            d = None
+
+        results["delta"] = d
+
+
+    return results
+
+def basic_plot(model):
+    fig, axs = plt.subplots(2, figsize=(8, 8))
+
+    results = calc_features(model)
+
+    plot_predictions(ax=axs[0], results=results,  model=model)
+    plot_prediction_error(ax=axs[1], results=results, model=model)
+
+    plt.show()
+
+
+def plot_predictions(ax, results, model):
+
 
     ax.set_title(f"{model.name}: Prediction vs Reality, RP={ROLLING_PREDICTION}")
 
-    x = get_x(model)
-
+    
+    x = results["x"]
+    y = results["y"]
+    yhat = results["yhat"]
 
     ax.plot(x, y, label="y")
     ax.plot(x, yhat, label="yhat")
@@ -32,19 +69,12 @@ def plot_predictions(ax, model):
 
     return ax
 
-def plot_prediction_error(ax, model):
-    # grab actual y
-    y = get_y(model)
+def plot_prediction_error(ax, results, model):
 
-    # grab yhat
-    yhat = get_yhat(model)
+    x = results["x"]
+    delta = results["delta"]
 
-    # calculate error
-    delta = [_y - _yh for _y, _yh in zip(y, yhat)]
-    x = get_x(model)
-
-
-    ax.set_title(f"{model.name}: Prediction Error,, RP={ROLLING_PREDICTION}")
+    ax.set_title(f"{model.name}: Prediction Error, RP={ROLLING_PREDICTION}")
     ax.plot(x, delta, label="y-yhat")
     ax.legend()
 
