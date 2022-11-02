@@ -65,14 +65,14 @@ class BaseForecaster:
         tds = dut.get_timedeltas(df=self.initial_df)
         _td = tds[0]
 
-        assert _tds == tds[1]  # verify if the first two tds are the same, required for the clock_shift check
+        assert _td == tds[1]  # verify if the first two tds are the same, required for the clock_shift check
         n_clock_shifts = 0
         for td in tds:
             if td == _td:
                 pass
             
             # clock_shift check
-            elif td == 3600 - _td or td == 3600 + _td:
+            elif td == 3600 + _td or td == -3600 + _td:
                 # this occurs during winter/summer time transition
                 n_clock_shifts += 1
             
