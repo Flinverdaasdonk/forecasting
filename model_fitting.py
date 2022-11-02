@@ -37,12 +37,9 @@ if __name__ == "__main__":
     m.fit()
 
     ### VISUALIZE RESULTS
-    fig, axs = plt.subplots(2, figsize=(8, 8))
+    
+    vut.basic_plot()
 
-    vut.plot_predictions(ax=axs[0], model=m)
-    vut.plot_prediction_error(ax=axs[1], model=m)
-
-    plt.show()
 
 
     if isinstance(m, models.CustomRandomForest):
