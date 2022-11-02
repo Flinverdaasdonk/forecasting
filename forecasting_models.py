@@ -1,6 +1,6 @@
-from lib2to3.pytree import Base
 from sklearn.ensemble import RandomForestRegressor
 from prophet import Prophet
+import datetime
 import data_utilities as dut
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -8,7 +8,7 @@ import numpy as np
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 
 class BaseForecaster:
-    def __init__(self, df, additional_data_transformations, split):
+    def __init__(self, df, h, additional_data_transformations, split):
         if additional_data_transformations is None:
             adt = []
         elif not isinstance(additional_data_transformations, list):
@@ -16,14 +16,17 @@ class BaseForecaster:
         else:
             adt = additional_data_transformations
 
+        self.h = h
         self.additional_data_transformations = adt
         self.initial_data = df.copy(deep=True)
-        self.initial_data["datetimes"] = pd.to_datetime(self.initial_data["datetimes"])
+        self.initial_data["datetimes"] = [pd.to_datetime(dt) for dt in self.initial_data["datetimes"]]
 
         self.index_to_dts = {i: dt for i, dt in zip(list(self.initial_data.index), list(self.initial_data["datetimes"].values))}
 
         assert 0 < split < 1
         self.split = split
+
+        self.check_consecutive_datetimes()
 
     def post_init(self):
         self.name = self.__class__.__name__
@@ -38,12 +41,6 @@ class BaseForecaster:
     def get_data_transformations(self):
         return self.get_base_transformations() + self.additional_data_transformations
 
-    def fit(self):
-        raise NotImplementedError
-
-    def predict(self, X=None):
-        raise NotImplementedError
-
     def get_corresponding_dts(self, df):
         idxs = list(df.index)
         dts = [self.index_to_dts[idx] for idx in idxs]
@@ -55,12 +52,25 @@ class BaseForecaster:
 
     def get_train_dts(self):
         dts = self.get_corresponding_dts(df=self.train_data)
-        return dts     
+        return dts   
+
+    def check_consecutive_datetimes(self):
+        dts = self.initial_data["datetimes"].values
+        tds = [(dt1 - dt0).astype('float64')/1e9 for dt1, dt0 in zip(dts[1:], dts[:-1])]
+
+        assert all(td == tds[0] for td in tds), f"The timedeltas between consecutive steps is inconsistent" 
+
+
+    def fit(self):
+        raise NotImplementedError
+
+    def predict(self, df=None):
+        raise NotImplementedError
 
 
 class CustomRandomForest(BaseForecaster):
-    def __init__(self, df, additional_data_transformations=None, split=0.75, **kwargs):
-        super().__init__(df, additional_data_transformations=additional_data_transformations, split=split)
+    def __init__(self, df, h, additional_data_transformations=None, split=0.75, **kwargs):
+        super().__init__(df, h, additional_data_transformations=additional_data_transformations, split=split)
         self.model = RandomForestRegressor(**kwargs)
 
         self.ts2row_history_window = 5
@@ -72,8 +82,8 @@ class CustomRandomForest(BaseForecaster):
         base_transforms = [dut.TimeseriesToRow(column_name=self.ts2row_column_name, 
                 history_window=self.ts2row_history_window), 
                 dut.DatetimeConversion(),
-                dut.AddYesterdaysValue(h=2), 
-                dut.AddLastWeeksValue(h=2), 
+                dut.AddYesterdaysValue(h=self.h), 
+                dut.AddLastWeeksValue(h=self.h), 
                 dut.DropNaNs()]
         return base_transforms
 
@@ -105,8 +115,8 @@ class CustomRandomForest(BaseForecaster):
 
 
 class CustomProphet(BaseForecaster):
-    def __init__(self, df, additional_data_transformations, split=0.75, **kwargs):
-        super().__init__(df, additional_data_transformations=additional_data_transformations, split=split)
+    def __init__(self, df, h, additional_data_transformations, split=0.75, **kwargs):
+        super().__init__(df, h, additional_data_transformations=additional_data_transformations, split=split)
         self.model = Prophet(**kwargs)
 
 
@@ -149,8 +159,8 @@ class CustomProphet(BaseForecaster):
 
 
 class CustomSARIMAX(BaseForecaster):
-    def __init__(self, df, additional_data_transformations, split=0.75, **kwargs):
-        super().__init__(df, additional_data_transformations=additional_data_transformations, split=split)
+    def __init__(self, df, h, additional_data_transformations, split=0.75, **kwargs):
+        super().__init__(df, h, additional_data_transformations=additional_data_transformations, split=split)
     
         self.post_init()
         X, y = self.final_preprocessing_data(self.train_data)
@@ -160,8 +170,8 @@ class CustomSARIMAX(BaseForecaster):
     def get_base_transformations(self):
         base_transforms = [dut.AddWeekends(), 
                             dut.AddHolidays(),
-                            dut.AddLastWeeksValue(h=2),
-                            dut.AddYesterdaysValue(h=2),
+                            dut.AddLastWeeksValue(h=self.h),
+                            dut.AddYesterdaysValue(h=self.h),
                 dut.DatetimeConversion(drop_original_column=True),
                 dut.DropNaNs()]
         return base_transforms
@@ -185,12 +195,12 @@ class CustomSARIMAX(BaseForecaster):
 
 
 class CustomSimpleRulesBased(BaseForecaster):
-    def __init__(self, df, additional_data_transformations, split=0.75):
-        super().__init__(df, additional_data_transformations, split)
+    def __init__(self, df, h, additional_data_transformations, split=0.75):
+        super().__init__(df, h, additional_data_transformations, split)
         self.post_init()
 
     def get_base_transformations(self):
-        base_transforms = [dut.AddLastWeeksValue(h=2),
+        base_transforms = [dut.AddLastWeeksValue(h=self.h),
         dut.DropNaNs(),
         dut.OnlyKeepSpecificColumns(columns=["last_weeks_y", "y"])
         ]

@@ -17,7 +17,7 @@ if __name__ == "__main__":
     
     print("Start forecasting")
     tiny_test = True
-    residential = True
+    residential = False
 
     ### PREPARE DATA
     usable_data_folder = Path(r"C:\Users\Flin\OneDrive - TU Eindhoven\Flin\Flin\01 - Uni\00_Internship\Nokia\00_Programming\forecasting\datasets\train")
@@ -31,7 +31,7 @@ if __name__ == "__main__":
     # ### INITIALIZE MODEL
     adt = []
     # m = models.CustomRandomForest(df=df, additional_data_transformations=adt)  # 
-    m = models.CustomSARIMAX(df=df, additional_data_transformations=adt)
+    m = models.CustomRandomForest(df=df, additional_data_transformations=adt)
     m.fit()
 
 
