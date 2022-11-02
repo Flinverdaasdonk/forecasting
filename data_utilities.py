@@ -245,7 +245,7 @@ class AddYesterdaysValue(Transform):
         self.convolve = convolve
 
     def __call__(self, df):
-        td = (df["datetimes"].iloc[1] - df["datetimes"].iloc[0]).total_seconds()
+        td = get_timedelta(df)
 
         n_rows_in_horizon = int(self.h*3600 / td)
         n_rows_per_day = int(24*3600 / td)
@@ -272,7 +272,7 @@ class AddLastWeeksValue(Transform):
         self.convolve = convolve
 
     def __call__(self, df):
-        td = (df["datetimes"].iloc[1] - df["datetimes"].iloc[0]).total_seconds()
+        td = get_timedelta(df)
 
         n_rows_in_horizon = int(self.h*3600 / td)
         n_rows_per_week = int(7*24*3600 / td)
@@ -310,6 +310,16 @@ class OnlyKeepSpecificColumns(Transform):
 
     def __call__(self, df):
         return df[self.columns]
+
+
+def get_timedelta(df):
+    td = (df["datetimes"].iloc[1] - df["datetimes"].iloc[0]).total_seconds()
+    return td  
+
+def get_timedeltas(df):
+    dts = df["datetimes"]
+    tds = [(dt1 - dt0).total_seconds() for dt1, dt0 in zip(dts[1:], dts[:-1])]
+    return tds
 
 
 if __name__ == "__main__":

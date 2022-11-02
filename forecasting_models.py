@@ -58,11 +58,11 @@ class BaseForecaster:
 
     def get_train_dts(self):
         dts = self.get_corresponding_dts(df=self.train_df)
-        return dts   
+        return dts  
 
     def check_consecutive_datetimes(self):
-        dts = self.initial_df["datetimes"]
-        tds = [(dt1 - dt0).total_seconds() for dt1, dt0 in zip(dts[1:], dts[:-1])]
+        tds = dut.get_timedeltas(df=self.initial_df)
+        td = tds[0]
 
         assert all(td == tds[0] for td in tds), f"The timedeltas between consecutive steps is inconsistent" 
 
@@ -222,10 +222,9 @@ class CustomSARIMAX(BaseForecaster):
         super().__init__(df, h, additional_df_transformations=additional_df_transformations, split=split)
     
         self.post_init()
-        X, y = self.final_df_preprocessing(self.train_df)
+        X_df, y_df = self.final_df_preprocessing(self.train_df)
 
-        dt0, dt1 = self.initial_df["datetimes"][0], self.initial_df["datetimes"][1]
-        td_between_rows = (dt1-dt0).total_seconds()  # convert ns to s
+        td_between_rows = dut.get_timedelta(self.initial_df)
 
         samples_per_day = int(24*3600 / td_between_rows)
 

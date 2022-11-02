@@ -36,7 +36,6 @@ if __name__ == "__main__":
     m = models.CustomRandomForest(df=df, h=h, additional_df_transformations=adt)
     m.fit()
 
-
     ### VISUALIZE RESULTS
     fig, axs = plt.subplots(2, figsize=(8, 8))
 
