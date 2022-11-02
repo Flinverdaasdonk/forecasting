@@ -72,7 +72,7 @@ class BaseForecaster:
     def fit(self):
         raise NotImplementedError
 
-    def predict(self, predict_on_test=True, rolling_forecast=True):
+    def predict(self, predict_on_test=True, rolling_forecast=False):
         raise NotImplementedError
 
 
