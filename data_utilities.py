@@ -23,10 +23,10 @@ class DataPipeline:
         self.transforms = [] if transforms is None else transforms
 
     def __call__(self, df):
-        return self.apply_data_transformations(transforms=self.transforms, df=df)
+        return self.apply_df_transformations(transforms=self.transforms, df=df)
 
     @staticmethod
-    def apply_data_transformations(transforms, df):
+    def apply_df_transformations(transforms, df):
         transformed_df = df.copy(deep=True)
         for tf in transforms:
             transformed_df = tf(transformed_df)
@@ -327,18 +327,18 @@ if __name__ == "__main__":
 
     usable_data_folder = Path(r"C:\Users\Flin\OneDrive - TU Eindhoven\Flin\Flin\01 - Uni\00_Internship\Nokia\data_preperation\data\usable")
     fn = r"industrial\LoadProfile_20IPs_2016_LG_1.csv"
-    data = pd.read_csv(usable_data_folder / fn, index_col="datetime")
-    data.index = pd.to_datetime(data.index)
+    df = pd.read_csv(usable_data_folder / fn, index_col="datetime")
+    df.index = pd.to_datetime(df.index)
     
-    data["dts"] = [pd.to_datetime(dt) for dt in list(data.index)]
+    df["dts"] = [pd.to_datetime(dt) for dt in list(df.index)]
 
-    print(data.head())
+    print(df.head())
 
-    tf1= TimeseriesToRow(df=data, column_name="load_profile", history_window=5)
-    tf2 = DatetimeConversion(df=data, dt_column="dts")
+    tf1= TimeseriesToRow(df=df, column_name="load_profile", history_window=5)
+    tf2 = DatetimeConversion(df=df, dt_column="dts")
     pipe = DataPipeline([tf1, tf2])
 
-    out =pipe(data.copy(deep=True))
+    out =pipe(df.copy(deep=True))
     print(out.head())
     
     print("Done!")
