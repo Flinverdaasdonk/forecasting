@@ -107,9 +107,9 @@ class CustomRandomForest(BaseForecaster):
         X_df = df.copy(deep=True)
 
         y_series = X_df["y"]
-        X_df = X_df.drop(columns=["y"])
+        
+        X_df = X_df.drop(columns=["datetimes", "y"])
 
-        X_df = X_df.drop(columns=["datetimes"])
         return X_df, y_series
 
     def predict(self, predict_on_test=True):
@@ -191,7 +191,7 @@ class CustomSARIMAX(BaseForecaster):
                             dut.AddHolidays(),
                             dut.AddLastWeeksValue(h=self.h),
                             dut.AddYesterdaysValue(h=self.h),
-                dut.DatetimeConversion(drop_original_column=True),
+                dut.DatetimeConversion(),
                 dut.DropNaNs()]
         return base_transforms
 
@@ -211,7 +211,7 @@ class CustomSARIMAX(BaseForecaster):
 
     def final_df_preprocessing(self, df):
         y_series = df["y"]
-        X_df = df.drop(columns=["y"])
+        X_df = df.drop(columns=["datetimes", "y"])
         return X_df, y_series
 
 
