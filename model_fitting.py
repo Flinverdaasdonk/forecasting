@@ -49,9 +49,6 @@ if __name__ == "__main__":
 
         # plot feature importance
         features = m.features
-        del features[features.index("y")]
-        if "datetimes" in m.transformed_data.columns:
-            del features[features.index("datetimes")]
 
         importances = m.model.feature_importances_
 
