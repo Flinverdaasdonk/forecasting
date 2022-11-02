@@ -16,7 +16,7 @@ if __name__ == "__main__":
     import pandas as pd
     
     print("Start forecasting")
-    tiny_test = True
+    tiny_test = False
     residential = False
 
     ### PREPARE DATA

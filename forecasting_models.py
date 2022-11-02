@@ -63,9 +63,24 @@ class BaseForecaster:
 
     def check_consecutive_datetimes(self):
         tds = dut.get_timedeltas(df=self.initial_df)
-        td = tds[0]
+        _td = tds[0]
 
-        assert all(td == tds[0] for td in tds), f"The timedeltas between consecutive steps is inconsistent" 
+        assert _tds == tds[1]  # verify if the first two tds are the same, required for the clock_shift check
+        n_clock_shifts = 0
+        for td in tds:
+            if td == _td:
+                pass
+            
+            # clock_shift check
+            elif td == 3600 - _td or td == 3600 + _td:
+                # this occurs during winter/summer time transition
+                n_clock_shifts += 1
+            
+            else:
+                raise ValueError("The timedeltas between consecutive steps is inconsistent")
+        
+            n_years = self.initial_df["datetimes"].iloc[-1].year - self.initial_df["datetimes"].iloc[0].year + 1
+            assert n_clock_shifts <= 2*n_years
 
     def final_df_preprocessing(self, df):
         raise NotImplementedError

@@ -1,10 +1,11 @@
+ROLLING_PREDICTION = False
 def get_y(model):
     y = list((model.transformed_df["y"].values))
     return y
 
 def get_yhat(model):
     yhat_train = list(model.predict(predict_on_test=False))
-    yhat_test = list(model.predict(predict_on_test=True, rolling_prediction=True))
+    yhat_test = list(model.predict(predict_on_test=True, rolling_prediction=ROLLING_PREDICTION))
     yhat = yhat_train + yhat_test
     return yhat
 
@@ -19,7 +20,7 @@ def plot_predictions(ax, model):
     # grab yhat
     yhat = get_yhat(model)
 
-    ax.set_title(f"{model.name}: Prediction vs Reality")
+    ax.set_title(f"{model.name}: Prediction vs Reality, RP={ROLLING_PREDICTION}")
 
     x = get_x(model)
 
@@ -44,7 +45,7 @@ def plot_prediction_error(ax, model):
     x = get_x(model)
 
 
-    ax.set_title(f"{model.name}: Prediction Error")
+    ax.set_title(f"{model.name}: Prediction Error,, RP={ROLLING_PREDICTION}")
     ax.plot(x, delta, label="y-yhat")
     ax.legend()
 
