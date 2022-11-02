@@ -25,7 +25,7 @@ class BaseForecaster:
         self.index_to_dts = {i: dt for i, dt in zip(list(self.initial_df.index), list(self.initial_df["datetimes"]))}
 
         dts = self.initial_df["datetimes"]
-        assert str(type(dts[0])) == "<class 'pandas._libs.tslibs.timestamps.Timestamp'>"
+        assert str(type(dts.iloc[0])) == "<class 'pandas._libs.tslibs.timestamps.Timestamp'>"
         assert 0 < split < 1
         self.split = split
 
@@ -237,11 +237,52 @@ class CustomProphet(BaseForecaster):
         yhat = forecast["yhat"].values
         return yhat
 
+    def rolling_predict(self):
+        train_X_df, train_y_series = self.final_df_preprocessing(df=self.test_df)
+        test_X_df, test_y_series = self.final_df_preprocessing(df=self.test_df)
+
+        n = self.rolling_predict_rows_to_refit
+        iterations = len(test_X_df) // n
+
+        extended_train_X_df = train_X_df
+        extended_train_y_series = train_y_series
+        yhat = []
+
+        new_model = self.model
+        for i in range(iterations):
+
+            # grab data corresponding to this rolling window
+            sub_test_X_df = test_X_df.iloc[i*n:(i+1)*n]
+            sub_test_y_series = test_y_series.iloc[i*n:(i+1)*n]
+
+            # do forecast
+            sub_test_X = sub_test_X_df.to_numpy()
+            sub_yhat = list(new_model.predict(sub_test_X))
+            yhat.extend(sub_yhat)
+
+            # extend the training data
+            extended_train_X_df = extended_train_X_df.append(sub_test_X_df)
+            extended_train_y_series = extended_train_y_series.append(sub_test_y_series)
+
+            # initialize the new model
+            new_model = RandomForestRegressor(**self.kwargs)
+
+            # prepare data for the new model
+            new_X = extended_train_X_df.to_numpy()
+            new_y = extended_train_y_series.values
+
+            # fit the new model
+            new_model.fit(new_X, new_y)
+
+
+        return yhat
+
 
 class CustomSARIMAX(BaseForecaster):
     def __init__(self, df, h, additional_df_transformations, split=0.75, **kwargs):
         super().__init__(df, h, additional_df_transformations=additional_df_transformations, split=split)
-    
+
+        self.kwargs = kwargs
         self.post_init()
         
         self.max_iter = 10
@@ -249,12 +290,14 @@ class CustomSARIMAX(BaseForecaster):
 
     
     def make_model(self, df):
-        X_df, y_df = self.final_df_preprocessing(df=df)
-
         td_between_rows = dut.get_timedelta(self.initial_df)
         samples_per_day = int(24*3600 / td_between_rows)
 
-        return SARIMAX(endog=y, exog=X, order=(1,1,1), seasonal_order=(0,1,0,samples_per_day), **kwargs)
+        X_df, y_series = self.final_df_preprocessing(df=df)
+        y = y_series.values
+        X = X_df.to_numpy()
+
+        return SARIMAX(endog=y, exog=X, order=(1,1,1), seasonal_order=(0,1,0,samples_per_day), **self.kwargs)
 
 
     def get_base_transformations(self):
@@ -270,17 +313,21 @@ class CustomSARIMAX(BaseForecaster):
         self.fitted_model_parameters = self.model.fit(disp=False, maxiter=self.max_iter)
 
 
-    def predict(self, predict_on_test=True, rolling_forecast=True):
+    def predict(self, predict_on_test=True, rolling_prediction=False):   
+        if rolling_prediction:
+            return self.rolling_predict()
+
         if predict_on_test:
             X_df, y_series = self.final_df_preprocessing(df=self.test_df)
         else:
-            assert rolling_forecast is False 
+            assert rolling_prediction is False 
             X_df, y_series = self.final_df_preprocessing(df=self.train_df)
 
 
         X = X_df.to_numpy()
-
-        return self.fitted_model_parameters.predict(exog=X)
+        y = self.fitted_model_parameters.predict(exog=X)
+        foo=1
+        return y
 
     def final_df_preprocessing(self, df):
         y_series = df["y"]
@@ -289,6 +336,7 @@ class CustomSARIMAX(BaseForecaster):
 
 
     def rolling_predict(self):
+        print("Inside Rolling Predict")
         train_X_df, train_y_series = self.final_df_preprocessing(df=self.test_df)
         test_X_df, test_y_series = self.final_df_preprocessing(df=self.test_df)
 

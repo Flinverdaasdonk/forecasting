@@ -1,4 +1,5 @@
-ROLLING_PREDICTION = True
+ROLLING_PREDICTION = False
+
 def get_y(model):
     y = list((model.transformed_df["y"].values))
     return y

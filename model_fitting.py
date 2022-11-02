@@ -16,7 +16,7 @@ if __name__ == "__main__":
     import pandas as pd
     
     print("Start forecasting")
-    tiny_test = False
+    tiny_test = True
     residential = False
 
     ### PREPARE DATA
@@ -27,13 +27,13 @@ if __name__ == "__main__":
     path = usable_data_folder / fn
 
     df = pd.read_csv(path)
-    df = df.iloc[:4*24*7*4] if tiny_test else df
+    df = df.iloc[4*24*7:4*24*7*3] if tiny_test else df
 
 
     # ### INITIALIZE MODEL
     adt = []
     # m = models.CustomRandomForest(df=df, additional_data_transformations=adt)  # 
-    m = models.CustomRandomForest(df=df, h=h, additional_df_transformations=adt)
+    m = models.CustomSARIMAX(df=df, h=h, additional_df_transformations=adt)
     m.fit()
 
     ### VISUALIZE RESULTS
