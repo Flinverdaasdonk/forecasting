@@ -31,8 +31,6 @@ def plot_predictions(ax, model):
 
     return ax
 
-
-
 def plot_prediction_error(ax, model):
     # grab actual y
     y = get_y(model)
