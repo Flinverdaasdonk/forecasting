@@ -145,7 +145,7 @@ class CustomRandomForest(BaseForecaster):
         return self.model.predict(X)
 
     def rolling_predict(self):
-        train_X_df, train_y_series = self.final_df_preprocessing(df=self.test_df)
+        train_X_df, train_y_series = self.final_df_preprocessing(df=self.train_df)
         test_X_df, test_y_series = self.final_df_preprocessing(df=self.test_df)
 
         n = self.rolling_predict_rows_to_refit
@@ -189,13 +189,17 @@ class CustomRandomForest(BaseForecaster):
 class CustomProphet(BaseForecaster):
     def __init__(self, df, h, additional_df_transformations, split=0.75, **kwargs):
         super().__init__(df, h, additional_df_transformations=additional_df_transformations, split=split)
-        self.model = Prophet(**kwargs)
-
-
         self.post_init()
-        [self.model.add_regressor(c, mode="additive") for c in self.transformed_df.columns if c not in ["ds", "y"] and c.startswith("a_")]
-        [self.model.add_regressor(c, mode="multiplicative") for c in self.transformed_df.columns if c not in ["ds", "y"] and c.startswith("m_")]
+        self.kwargs = kwargs
 
+        self.model = self.make_model()
+
+
+    def make_model(self):
+        model = Prophet(weekly_seasonality=20, daily_seasonality=10, **self.kwargs)
+        [model.add_regressor(c, mode="additive") for c in self.transformed_df.columns if c not in ["ds", "y"] and c.startswith("a_")]
+        [model.add_regressor(c, mode="multiplicative") for c in self.transformed_df.columns if c not in ["ds", "y"] and c.startswith("m_")]
+        return model
 
     def get_base_transformations(self):
         base_transforms = [dut.AddWeekends(), 
@@ -205,7 +209,6 @@ class CustomProphet(BaseForecaster):
 
     def fit(self):
         X_df, y_series = self.final_df_preprocessing(df=self.train_df)
-
         df = X_df.copy(deep=True)
         df["y"] = y_series
         
@@ -218,13 +221,15 @@ class CustomProphet(BaseForecaster):
             df.rename(columns={"datetimes": "ds"}, inplace=True)
 
         assert "ds" in df.columns
-        X_df = df.drop(columns=["ds"])
         y_series = df["y"]
+        X_df = df.drop(columns="y")
         return X_df, y_series
 
+    def predict(self, predict_on_test=True, rolling_prediction=False):
+        if rolling_prediction:
+            self.rolling_predict()
 
 
-    def predict(self, predict_on_test=True, rolling_forecast=True):
         if predict_on_test:
             X_df, y_series = self.final_df_preprocessing(df=self.test_df)
         else:
@@ -234,11 +239,11 @@ class CustomProphet(BaseForecaster):
         df["y"] = y_series
 
         forecast = self.model.predict(df)
-        yhat = forecast["yhat"].values
+        yhat = list(forecast["yhat"].values)
         return yhat
 
     def rolling_predict(self):
-        train_X_df, train_y_series = self.final_df_preprocessing(df=self.test_df)
+        train_X_df, train_y_series = self.final_df_preprocessing(df=self.train_df)
         test_X_df, test_y_series = self.final_df_preprocessing(df=self.test_df)
 
         n = self.rolling_predict_rows_to_refit
@@ -256,8 +261,8 @@ class CustomProphet(BaseForecaster):
             sub_test_y_series = test_y_series.iloc[i*n:(i+1)*n]
 
             # do forecast
-            sub_test_X = sub_test_X_df.to_numpy()
-            sub_yhat = list(new_model.predict(sub_test_X))
+            forecast = new_model.predict(sub_test_X_df)
+            sub_yhat = list(forecast["yhat"].values)
             yhat.extend(sub_yhat)
 
             # extend the training data
@@ -265,14 +270,15 @@ class CustomProphet(BaseForecaster):
             extended_train_y_series = extended_train_y_series.append(sub_test_y_series)
 
             # initialize the new model
-            new_model = RandomForestRegressor(**self.kwargs)
+            new_model = self.make_model()
 
             # prepare data for the new model
-            new_X = extended_train_X_df.to_numpy()
-            new_y = extended_train_y_series.values
+            df = extended_train_X_df.copy(deep=True)
+            df["y"] = extended_train_y_series
+
 
             # fit the new model
-            new_model.fit(new_X, new_y)
+            new_model.fit(df)
 
 
         return yhat
