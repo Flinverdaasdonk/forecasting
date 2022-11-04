@@ -1,33 +1,20 @@
 import matplotlib.pyplot as plt
 import forecasting_models as models
+import training_utilities as tut
 from config import *
-
-def get_y(model):
-    y = list((model.transformed_df["y"].values))
-    return y
-
-def get_yhat(model):
-    yhat_train = list(model.predict(predict_on_test=False))
-    yhat_test = list(model.predict(predict_on_test=True, rolling_prediction=ROLLING_PREDICTION))
-    yhat = yhat_train + yhat_test
-    return yhat
-
-def get_x(model):
-    x = model.get_corresponding_dts(df=model.transformed_df)
-    return x
 
 def calc_features(model, x=True, y=True, yhat=True, delta=True):
     results = {}
 
     # grab x
-    results["x"] = get_x(model) if x else None
+    results["x"] = tut.get_x(model) if x else None
 
     # grab actual y
-    results["y"] = get_y(model) if y else None
+    results["y"] = tut.get_y(model) if y else None
     
     # grab yhat
 
-    results["yhat"] = get_yhat(model) if yhat else None
+    results["yhat"] = tut.get_yhat(model) if yhat else None
 
     # delta
     if delta:
