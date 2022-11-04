@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
-
-ROLLING_PREDICTION = False
+import forecasting_models as models
+from config import *
 
 def get_y(model):
     y = list((model.transformed_df["y"].values))
@@ -79,3 +79,20 @@ def plot_prediction_error(ax, results, model):
     ax.legend()
 
     return ax
+
+def plot_feature_importance(m):
+    if isinstance(m, models.CustomRandomForest):
+
+        # plot feature importance
+        features = m.features
+
+        importances = m.model.feature_importances_
+
+        assert len(features) == len(importances)
+        d = {f:i for f, i in zip(features, importances)}
+
+        plt.barh(features, importances)
+        plt.show()
+
+
+        print("Done!")

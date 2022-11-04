@@ -1,6 +1,7 @@
 import forecasting_models as models
 import data_utilities as dut
 import visualization_utilities as vut
+from config import *
 
 def make_train_test_split(df, split):
     assert 0 <= split <= 1
@@ -14,27 +15,38 @@ if __name__ == "__main__":
     from pathlib import Path
     import matplotlib.pyplot as plt
     import pandas as pd
-    
-    print("Start forecasting")
-    tiny_test = False
-    residential = False
 
-    ### PREPARE DATA
-    h = 2
-    usable_data_folder = Path(r"C:\Users\Flin\OneDrive - TU Eindhoven\Flin\Flin\01 - Uni\00_Internship\Nokia\00_Programming\forecasting\datasets\train")
 
-    fn = f"residential_no_pv\\h={h}_residential_2018_NO_PV_SFH3_2018.csv" if residential else f"industrial\\h={h}_industrial_2016_LG_1.csv"
-    path = usable_data_folder / fn
+    ### CONSTANTS
+    h = HORIZON
+    adt = []
 
+    ### GET FILENAME
+    if TINY_TEST_CATEGORY == "industrial":
+        fn = f"industrial\\h={h}_industrial_2016_LG_1.csv"
+    elif TINY_TEST_CATEGORY == "residential_no_pv":
+        fn = "residential_no_pv\\h={h}_residential_2018_NO_PV_SFH3_2018.csv"
+    elif TINY_TEST_CATEGORY == "residential_with_pv":
+        fn = "residential_with_pv\\h={h}_residential_2018_WITH_PV_SFH13_2018.csv"
+    else:
+        raise NotImplementedError
+
+    ### LOAD DATA
+    path = Path(MAIN_DATA_DIR) / Path("train") / fn
     df = pd.read_csv(path)
-    df = df.iloc[4*24*7*2:4*24*7*4] if tiny_test else df
+    df = df.iloc[4*24*7*2:4*24*7*4] if TINY_TEST else df
 
 
     # ### INITIALIZE MODEL
-    adt = []
-    # m = models.CustomRandomForest(df=df, additional_data_transformations=adt)  # 
-    # m = models.CustomSARIMAX(df=df, h=h, additional_df_transformations=adt)
-    m = models.CustomProphet(df=df, h=h, additional_df_transformations=adt)
+    if MODEL_TYPE == "RandomForest":
+        m = models.CustomRandomForest(df=df, additional_data_transformations=adt)
+    elif MODEL_TYPE == "SARIMAX":
+        m = models.CustomSARIMAX(df=df, h=h, additional_df_transformations=adt)
+    elif MODEL_TYPE == "Prophet":
+        m = models.CustomProphet(df=df, h=h, additional_df_transformations=adt)
+
+
+    ### INITIAL FIT
     m.fit()
 
     ### VISUALIZE RESULTS
@@ -43,19 +55,5 @@ if __name__ == "__main__":
 
 
 
-    if isinstance(m, models.CustomRandomForest):
 
-        # plot feature importance
-        features = m.features
-
-        importances = m.model.feature_importances_
-
-        assert len(features) == len(importances)
-        d = {f:i for f, i in zip(features, importances)}
-
-        plt.barh(features, importances)
-        plt.show()
-
-
-        print("Done!")
 
