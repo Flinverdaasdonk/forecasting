@@ -3,6 +3,9 @@ import data_utilities as dut
 import visualization_utilities as vut
 from config import *
 
+def simple_training_loop(model):
+    
+
 if __name__ == "__main__":
     from pathlib import Path
     import matplotlib.pyplot as plt

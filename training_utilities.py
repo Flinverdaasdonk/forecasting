@@ -1,7 +1,6 @@
 from pathlib import Path
 from config import *
 
-
 def generic_yield_fns(h, specific_folder_name, main_data_dir=MAIN_DATA_DIR):
     specific_data_dir = Path(main_data_dir) / specific_folder_name
 

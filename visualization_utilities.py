@@ -1,20 +1,20 @@
 import matplotlib.pyplot as plt
 import forecasting_models as models
-import training_utilities as tut
+import evaluation_utilities as eut
 from config import *
 
 def calc_features(model, x=True, y=True, yhat=True, delta=True):
     results = {}
 
     # grab x
-    results["x"] = tut.get_x(model) if x else None
+    results["x"] = eut.get_x(model) if x else None
 
     # grab actual y
-    results["y"] = tut.get_y(model) if y else None
+    results["y"] = eut.get_y(model) if y else None
     
     # grab yhat
 
-    results["yhat"] = tut.get_yhat(model) if yhat else None
+    results["yhat"] = eut.get_yhat(model) if yhat else None
 
     # delta
     if delta:
