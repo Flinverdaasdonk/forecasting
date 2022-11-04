@@ -3,14 +3,6 @@ import data_utilities as dut
 import visualization_utilities as vut
 from config import *
 
-def make_train_test_split(df, split):
-    assert 0 <= split <= 1
-    n = int(len(df)*split)
-    train_df = df.iloc[:n].copy(deep=True)
-    test_df = df.iloc[n:].copy(deep=True)
-
-    return train_df, test_df
-
 if __name__ == "__main__":
     from pathlib import Path
     import matplotlib.pyplot as plt
