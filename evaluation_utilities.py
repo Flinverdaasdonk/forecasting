@@ -1,3 +1,5 @@
+from config import *
+
 def get_y(model):
     y = list((model.transformed_df["y"].values))
     return y

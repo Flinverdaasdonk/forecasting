@@ -2,13 +2,15 @@ from sklearn.ensemble import RandomForestRegressor
 from prophet import Prophet
 import datetime
 import data_utilities as dut
+import joblib
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 from statsmodels.tsa.statespace.sarimax import SARIMAX
+from config import *
 
 class BaseForecaster:
-    def __init__(self, df, h, additional_df_transformations, split):
+    def __init__(self, df, h, additional_df_transformations, split=TRAIN_EVAL_SPLIT):
         if additional_df_transformations is None:
             adt = []
         elif not isinstance(additional_df_transformations, list):
@@ -34,6 +36,7 @@ class BaseForecaster:
 
     def post_init(self):
         self.name = self.__class__.__name__
+        self.fn = f"{self.name}_h={self.h}"
         self.data_transformations = self.get_data_transformations()
         self.pipeline = dut.DataPipeline(transforms=self.data_transformations)
         self.transformed_df = self.pipeline(self.initial_df)
@@ -91,10 +94,16 @@ class BaseForecaster:
     def predict(self, predict_on_test=True, rolling_prediction=False):
         raise NotImplementedError
 
+    def save(self):
+        joblib.dump(self, f"{self.fn}.joblib")
+
+    @staticmethod
+    def load(fn):
+        return joblib.load(fn)
 
 class CustomRandomForest(BaseForecaster):
-    def __init__(self, df, h, additional_df_transformations=None, split=0.75, **kwargs):
-        super().__init__(df, h, additional_df_transformations=additional_df_transformations, split=split)
+    def __init__(self, df, h, additional_df_transformations=None, **kwargs):
+        super().__init__(df, h, additional_df_transformations=additional_df_transformations)
         self.kwargs = kwargs
         self.model = self.make_model()
 
@@ -187,8 +196,8 @@ class CustomRandomForest(BaseForecaster):
 
 
 class CustomProphet(BaseForecaster):
-    def __init__(self, df, h, additional_df_transformations, split=0.75, **kwargs):
-        super().__init__(df, h, additional_df_transformations=additional_df_transformations, split=split)
+    def __init__(self, df, h, additional_df_transformations, **kwargs):
+        super().__init__(df, h, additional_df_transformations=additional_df_transformations)
         self.post_init()
         self.kwargs = kwargs
 
@@ -285,8 +294,8 @@ class CustomProphet(BaseForecaster):
 
 
 class CustomSARIMAX(BaseForecaster):
-    def __init__(self, df, h, additional_df_transformations, split=0.75, **kwargs):
-        super().__init__(df, h, additional_df_transformations=additional_df_transformations, split=split)
+    def __init__(self, df, h, additional_df_transformations, **kwargs):
+        super().__init__(df, h, additional_df_transformations=additional_df_transformations)
 
         self.kwargs = kwargs
         self.post_init()
@@ -386,8 +395,8 @@ class CustomSARIMAX(BaseForecaster):
 
 
 class CustomSimpleRulesBased(BaseForecaster):
-    def __init__(self, df, h, additional_df_transformations, split=0.75):
-        super().__init__(df, h, additional_df_transformations, split)
+    def __init__(self, df, h, additional_df_transformations):
+        super().__init__(df, h, additional_df_transformations)
         self.post_init()
 
     def get_base_transformations(self):

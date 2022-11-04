@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import datetime
+from config import *
 import holidays
 
 class DataPipeline:
@@ -321,6 +322,11 @@ def get_timedeltas(df):
     tds = [(dt1 - dt0).total_seconds() for dt1, dt0 in zip(dts[1:], dts[:-1])]
     return tds
 
+def load_df(path):
+    df = pd.read_csv(path)
+    df._source_path = path
+    
+    df = df.iloc[TINY_TEST_BEGIN:TINY_TEST_END] if TINY_TEST else df
 
 if __name__ == "__main__":
     from pathlib import Path
