@@ -23,6 +23,15 @@ def yield_validation_fns(h, main_data_dir=MAIN_DATA_DIR):
     for fn in generic_yield_fns(h, specific_folder_name="validation", main_data_dir=main_data_dir):
         yield fn
 
+def yield_all_fns(h, main_data_dir=MAIN_DATA_DIR):
+    fns = [fn for fn in yield_train_fns(h, main_data_dir)]
+    fns.extend([fn for fn in yield_test_fns(h, main_data_dir)])
+    fns.extend([fn for fn in yield_validation_fns(h, main_data_dir)])
+
+    for fn in fns:
+        yield fn
+        
+
 if __name__ == "__main__":
 
     for fn in yield_test_fns(h=2):

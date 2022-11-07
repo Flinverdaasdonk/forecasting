@@ -444,7 +444,7 @@ class CustomSimpleRulesBased(BaseForecaster):
         pass
 
 
-    def predict(self, predict_on_test=True, rolling_forecast=True):
+    def predict(self, predict_on_test=True, rolling_prediction=True):
         if predict_on_test:
             X_df, y_series = self.final_df_preprocessing(df=self.test_df)
         else:

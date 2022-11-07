@@ -89,8 +89,13 @@ if __name__ == "__main__":
         m = models.CustomSARIMAX(df=df, h=h, additional_df_transformations=adt, data_path=data_path)
     elif MODEL_TYPE == "Prophet":
         m = models.CustomProphet(df=df, h=h, additional_df_transformations=adt, data_path=data_path)
+    elif MODEL_TYPE == "RulesBased":
+        m = models.CustomSimpleRulesBased(df=df, h=h, additional_df_transformations=adt, data_path=data_path)
 
-    ### LETSO
+    else:
+        raise NotImplementedError
+
+    ### LETSGOOO
     fit_eval_log(model=m)
     # ### INITIAL FIT
 

@@ -11,4 +11,4 @@ TINY_TEST_END = 4*24*7*4
 ROLLING_PREDICTION = False
 TRAIN_EVAL_SPLIT = 0.7
 HORIZON = 2
-MODEL_TYPE = "RandomForest"  # "RandomForest", "SARIMAX", "Prophet"
+MODEL_TYPE = "RulesBased"  # "RandomForest", "SARIMAX", "Prophet", "RulesBased"
