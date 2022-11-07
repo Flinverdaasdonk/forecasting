@@ -14,8 +14,13 @@ def sweep_training_dataset_and_log(h):
         df = dut.load_df(data_path)
         m = tut.load_model(df, h, adt, data_path)
 
+        tic = time.time()
+        m.fit()
+        elapsed = time.time() - tic
 
-        lut.make_and_save_logs(model=m)
+        logs = {"time_to_fit": elapsed}
+
+        lut.make_and_save_logs(model=m, logs=logs)
 
 
 if __name__ == "__main__":

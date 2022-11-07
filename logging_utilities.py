@@ -2,6 +2,7 @@ from config import *
 from pathlib import Path
 import json
 import evaluation_utilities as eut
+import time
 
 def find_next_available_ID(log_dir=MAIN_LOG_DIR):
     files = [file for file in Path(log_dir).iterdir() if file.is_file()]
@@ -45,19 +46,29 @@ def save_logs(model, logs, log_dir=MAIN_LOG_DIR):
 def make_and_save_logs(model, logs=None, get_x=True, get_y=True, get_yhat=True, log_dir=MAIN_LOG_DIR):
     if logs is None:
         logs = {}
-        if get_x:
-            x = eut.get_x(model)
-            x = [str(_x) for _x in x]
-            logs["x"] = x
-        if get_y:
-            y = eut.get_y(model)
-            y = [float(_y) for _y in y]
-            logs["y"] = y
-        if get_yhat:
-            yhat = eut.get_yhat(model)
-            yhat = [float(_yh) for _yh in yhat]
-            logs["yhat"] = yhat
+
+    if get_x:
+        x = eut.get_x(model)
+        x = [str(_x) for _x in x]
+        logs["x"] = x
+    if get_y:
+        y = eut.get_y(model)
+        y = [float(_y) for _y in y]
+        logs["y"] = y
+    if get_yhat:
+
+        tic = time.time()
         
+        yhat = eut.get_yhat(model)
+        
+        elapsed = time.time() - tic
+        logs["time_to_predict"] = elapsed
+
+
+        yhat = [float(_yh) for _yh in yhat]
+        logs["yhat"] = yhat
+        
+    
     logs = make_logs(model, logs)
     logs["rolling_prediction"] = ROLLING_PREDICTION
 
@@ -65,7 +76,7 @@ def make_and_save_logs(model, logs=None, get_x=True, get_y=True, get_yhat=True, 
     if TINY_TEST:
         logs["tiny_test_begin"] = TINY_TEST_BEGIN
         logs["tiny_test_end"]  = TINY_TEST_END
-        
+
     save_logs(model, logs, log_dir)
 
     return
