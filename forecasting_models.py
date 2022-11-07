@@ -11,7 +11,7 @@ from statsmodels.tsa.statespace.sarimax import SARIMAX
 from config import *
 
 class BaseForecaster:
-    def __init__(self, df, h, additional_df_transformations, path, split=TRAIN_EVAL_SPLIT):
+    def __init__(self, df, h, additional_df_transformations, data_path, split=TRAIN_EVAL_SPLIT):
         if additional_df_transformations is None:
             adt = []
         elif not isinstance(additional_df_transformations, list):
@@ -34,7 +34,7 @@ class BaseForecaster:
 
         self.check_consecutive_datetimes()
 
-        shortened_path = list(path.parts[-4:])
+        shortened_path = list(data_path.parts[-4:])
         shortened_path = Path("/".join(shortened_path))
         setattr(df, "source_path", shortened_path)
         self.data_source_path = df.source_path
@@ -115,8 +115,8 @@ class BaseForecaster:
         return logworthy_attributes
 
 class CustomRandomForest(BaseForecaster):
-    def __init__(self, df, h, additional_df_transformations, path, **kwargs):
-        super().__init__(df, h, additional_df_transformations=additional_df_transformations, path=path)
+    def __init__(self, df, h, additional_df_transformations, data_path, **kwargs):
+        super().__init__(df, h, additional_df_transformations=additional_df_transformations, data_path=data_path)
         self.kwargs = kwargs
         self.model = self.make_model()
 
@@ -216,8 +216,8 @@ class CustomRandomForest(BaseForecaster):
         return yhat
 
 class CustomProphet(BaseForecaster):
-    def __init__(self, df, h, additional_df_transformations, path, **kwargs):
-        super().__init__(df, h, additional_df_transformations=additional_df_transformations, path=path)
+    def __init__(self, df, h, additional_df_transformations, data_path, **kwargs):
+        super().__init__(df, h, additional_df_transformations=additional_df_transformations, data_path=data_path)
         self.post_init()
         self.kwargs = kwargs
 
@@ -322,8 +322,8 @@ class CustomProphet(BaseForecaster):
         return yhat
 
 class CustomSARIMAX(BaseForecaster):
-    def __init__(self, df, h, additional_df_transformations, path, **kwargs):
-        super().__init__(df, h, additional_df_transformations=additional_df_transformations, path=path)
+    def __init__(self, df, h, additional_df_transformations, data_path, **kwargs):
+        super().__init__(df, h, additional_df_transformations=additional_df_transformations, data_path=data_path)
 
         self.kwargs = kwargs
         self.post_init()
@@ -429,8 +429,8 @@ class CustomSARIMAX(BaseForecaster):
         return yhat
 
 class CustomSimpleRulesBased(BaseForecaster):
-    def __init__(self, df, h, additional_df_transformations, path):
-        super().__init__(df, h, additional_df_transformations, path=path)
+    def __init__(self, df, h, additional_df_transformations, data_path):
+        super().__init__(df, h, additional_df_transformations, data_path=data_path)
         self.post_init()
 
     def get_base_transformations(self):

@@ -79,16 +79,16 @@ if __name__ == "__main__":
         raise NotImplementedError
 
     ### LOAD DATA
-    path = Path(MAIN_DATA_DIR) / Path("train") / fn
-    df = dut.load_df(path)
+    data_path = Path(MAIN_DATA_DIR) / Path("train") / fn
+    df = dut.load_df(data_path)
 
     # ### INITIALIZE MODEL
     if MODEL_TYPE == "RandomForest":
-        m = models.CustomRandomForest(df=df, h=h, additional_df_transformations=adt, path=path)
+        m = models.CustomRandomForest(df=df, h=h, additional_df_transformations=adt, data_path=data_path)
     elif MODEL_TYPE == "SARIMAX":
-        m = models.CustomSARIMAX(df=df, h=h, additional_df_transformations=adt, path=path)
+        m = models.CustomSARIMAX(df=df, h=h, additional_df_transformations=adt, data_path=data_path)
     elif MODEL_TYPE == "Prophet":
-        m = models.CustomProphet(df=df, h=h, additional_df_transformations=adt, path=path)
+        m = models.CustomProphet(df=df, h=h, additional_df_transformations=adt, data_path=data_path)
 
     ### LETSO
     fit_eval_log(model=m)
