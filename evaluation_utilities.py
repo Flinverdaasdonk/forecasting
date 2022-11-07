@@ -13,3 +13,4 @@ def get_yhat(model):
 def get_x(model):
     x = model.get_corresponding_dts(df=model.transformed_df)
     return x
+

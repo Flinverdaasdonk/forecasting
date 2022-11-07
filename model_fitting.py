@@ -3,6 +3,7 @@ import data_utilities as dut
 import visualization_utilities as vut
 import logging_utilities as lut
 import evaluation_utilities as eut
+import training_utilities as tut
 from config import *
 import time
 
@@ -55,9 +56,6 @@ def fit_eval_log(model):
     plt.show()
     
 
-
-
-
 if __name__ == "__main__":
     from pathlib import Path
     import matplotlib.pyplot as plt
@@ -80,20 +78,9 @@ if __name__ == "__main__":
 
     ### LOAD DATA
     data_path = Path(MAIN_DATA_DIR) / Path("train") / fn
+    
     df = dut.load_df(data_path)
-
-    # ### INITIALIZE MODEL
-    if MODEL_TYPE == "RandomForest":
-        m = models.CustomRandomForest(df=df, h=h, additional_df_transformations=adt, data_path=data_path)
-    elif MODEL_TYPE == "SARIMAX":
-        m = models.CustomSARIMAX(df=df, h=h, additional_df_transformations=adt, data_path=data_path)
-    elif MODEL_TYPE == "Prophet":
-        m = models.CustomProphet(df=df, h=h, additional_df_transformations=adt, data_path=data_path)
-    elif MODEL_TYPE == "RulesBased":
-        m = models.CustomSimpleRulesBased(df=df, h=h, additional_df_transformations=adt, data_path=data_path)
-
-    else:
-        raise NotImplementedError
+    m = tut.load_model(df, h, adt, data_path)
 
     ### LETSGOOO
     fit_eval_log(model=m)

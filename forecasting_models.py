@@ -112,6 +112,9 @@ class BaseForecaster:
         logworthy_attributes = {}
         logworthy_attributes["features"] = self.features
         logworthy_attributes["data_source_path"] = str(self.data_source_path)
+        logworthy_attributes["horizon"] = self.h
+        logworthy_attributes["model"] = self.name
+        logworthy_attributes["train_eval_split"] = self.split
         return logworthy_attributes
 
 class CustomRandomForest(BaseForecaster):
