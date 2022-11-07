@@ -3,6 +3,7 @@ import pandas as pd
 import datetime
 from config import *
 import holidays
+from pathlib import Path
 
 class DataPipeline:
     """Container for all required transformations for a specific forecasting model
@@ -324,9 +325,9 @@ def get_timedeltas(df):
 
 def load_df(path):
     df = pd.read_csv(path)
-    df._source_path = path
-    
     df = df.iloc[TINY_TEST_BEGIN:TINY_TEST_END] if TINY_TEST else df
+
+    return df
 
 if __name__ == "__main__":
     from pathlib import Path

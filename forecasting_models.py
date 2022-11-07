@@ -5,12 +5,13 @@ import data_utilities as dut
 import joblib
 import matplotlib.pyplot as plt
 import pandas as pd
+from pathlib import Path
 import numpy as np
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 from config import *
 
 class BaseForecaster:
-    def __init__(self, df, h, additional_df_transformations, split=TRAIN_EVAL_SPLIT):
+    def __init__(self, df, h, additional_df_transformations, path, split=TRAIN_EVAL_SPLIT):
         if additional_df_transformations is None:
             adt = []
         elif not isinstance(additional_df_transformations, list):
@@ -32,6 +33,12 @@ class BaseForecaster:
         self.split = split
 
         self.check_consecutive_datetimes()
+
+        shortened_path = list(path.parts[-4:])
+        shortened_path = Path("/".join(shortened_path))
+        setattr(df, "source_path", shortened_path)
+        self.data_source_path = df.source_path
+
         self.rolling_predict_rows_to_refit = int(2*24*3600 / dut.get_timedelta(df=self.initial_df))
 
     def post_init(self):
@@ -101,9 +108,15 @@ class BaseForecaster:
     def load(fn):
         return joblib.load(fn)
 
+    def logworthy_attributes(self):
+        logworthy_attributes = {}
+        logworthy_attributes["features"] = self.features
+        logworthy_attributes["data_source_path"] = str(self.data_source_path)
+        return logworthy_attributes
+
 class CustomRandomForest(BaseForecaster):
-    def __init__(self, df, h, additional_df_transformations=None, **kwargs):
-        super().__init__(df, h, additional_df_transformations=additional_df_transformations)
+    def __init__(self, df, h, additional_df_transformations, path, **kwargs):
+        super().__init__(df, h, additional_df_transformations=additional_df_transformations, path=path)
         self.kwargs = kwargs
         self.model = self.make_model()
 
@@ -111,6 +124,15 @@ class CustomRandomForest(BaseForecaster):
         self.ts2row_column_name = "load_profile"
 
         self.post_init()
+
+    def logworthy_attributes(self):
+        logworthy_attributes = super().logworthy_attributes()
+        logworthy_attributes = {**logworthy_attributes, **self.kwargs}
+
+        logworthy_attributes["features"] = self.features
+        logworthy_attributes["ts2row_history_window"] = self.ts2row_history_window
+        return logworthy_attributes
+        
 
     def make_model(self):
         return RandomForestRegressor(**self.kwargs)
@@ -193,11 +215,9 @@ class CustomRandomForest(BaseForecaster):
 
         return yhat
 
-
-
 class CustomProphet(BaseForecaster):
-    def __init__(self, df, h, additional_df_transformations, **kwargs):
-        super().__init__(df, h, additional_df_transformations=additional_df_transformations)
+    def __init__(self, df, h, additional_df_transformations, path, **kwargs):
+        super().__init__(df, h, additional_df_transformations=additional_df_transformations, path=path)
         self.post_init()
         self.kwargs = kwargs
 
@@ -209,6 +229,15 @@ class CustomProphet(BaseForecaster):
         [model.add_regressor(c, mode="additive") for c in self.transformed_df.columns if c not in ["ds", "y"] and c.startswith("a_")]
         [model.add_regressor(c, mode="multiplicative") for c in self.transformed_df.columns if c not in ["ds", "y"] and c.startswith("m_")]
         return model
+
+    def logworthy_attributes(self):
+        logworthy_attributes = super().logworthy_attributes()
+        logworthy_attributes = {**logworthy_attributes, **self.kwargs}
+
+        logworthy_attributes["features"] = self.features
+        logworthy_attributes["weekly_seasonality"] = self.model.weekly_seasonality
+        logworthy_attributes["daily_seasonality"] = self.model.daily_seasonality
+        return logworthy_attributes
 
     def get_base_transformations(self):
         base_transforms = [dut.AddWeekends(), 
@@ -292,17 +321,15 @@ class CustomProphet(BaseForecaster):
 
         return yhat
 
-
 class CustomSARIMAX(BaseForecaster):
-    def __init__(self, df, h, additional_df_transformations, **kwargs):
-        super().__init__(df, h, additional_df_transformations=additional_df_transformations)
+    def __init__(self, df, h, additional_df_transformations, path, **kwargs):
+        super().__init__(df, h, additional_df_transformations=additional_df_transformations, path=path)
 
         self.kwargs = kwargs
         self.post_init()
         
-        self.max_iter = 10
+        self.max_iter = 20
         self.model = self.make_model(df=self.train_df)
-
     
     def make_model(self, df):
         td_between_rows = dut.get_timedelta(self.initial_df)
@@ -314,6 +341,15 @@ class CustomSARIMAX(BaseForecaster):
 
         return SARIMAX(endog=y, exog=X, order=(1,1,1), seasonal_order=(0,1,0,samples_per_day), **self.kwargs)
 
+    def logworthy_attributes(self):
+        logworthy_attributes = super().logworthy_attributes()
+        logworthy_attributes = {**logworthy_attributes, **self.kwargs}
+
+        logworthy_attributes["SARIMAX_max_iter"] = self.max_iter
+        logworthy_attributes["SARIMAX_order"] = self.model.order
+        logworthy_attributes["SARIMAX_seasonal_order"] = self.model.seasonal_order
+        
+        return logworthy_attributes
 
     def get_base_transformations(self):
         base_transforms = [dut.AddWeekends(), 
@@ -355,7 +391,6 @@ class CustomSARIMAX(BaseForecaster):
 
 
     def rolling_predict(self):
-        print("Inside Rolling Predict")
         train_X_df, train_y_series = self.final_df_preprocessing(df=self.train_df)
         test_X_df, test_y_series = self.final_df_preprocessing(df=self.test_df)
 
@@ -393,10 +428,9 @@ class CustomSARIMAX(BaseForecaster):
 
         return yhat
 
-
 class CustomSimpleRulesBased(BaseForecaster):
-    def __init__(self, df, h, additional_df_transformations):
-        super().__init__(df, h, additional_df_transformations)
+    def __init__(self, df, h, additional_df_transformations, path):
+        super().__init__(df, h, additional_df_transformations, path=path)
         self.post_init()
 
     def get_base_transformations(self):
