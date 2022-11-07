@@ -1,4 +1,6 @@
 scrappy_notebooks/*
+logs/*
+config.py
 misc_datasets/*
 __pycache__/forecasting_models.cpython-37.pyc
 __pycache__/data_utilities.cpython-37.pyc
