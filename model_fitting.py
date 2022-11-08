@@ -36,6 +36,7 @@ def fit_eval_log(model):
     logs = {}
 
     tic = time.time()
+    print("Fitting model")
     model.fit()
     elapsed = time.time() - tic
     print(f"time_to_fit: {elapsed}")
@@ -44,8 +45,10 @@ def fit_eval_log(model):
 
     logs["x"] = [str(_x) for _x in x]
     logs["y"] = [float(_y) for _y in y]
+    print("Forecast using model")
     logs["yhat"] = [float(_yh) for _yh in yhat]
 
+    print("Making logs")
     lut.make_and_save_logs(model, logs)
 
     res = {"x": x, "y": y, "yhat": yhat}
@@ -80,6 +83,7 @@ if __name__ == "__main__":
     data_path = Path(MAIN_DATA_DIR) / Path("train") / fn
     
     df = dut.load_df(data_path)
+    print("Making model")
     m = tut.load_model(df, h, adt, data_path)
 
     ### LETSGOOO

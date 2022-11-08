@@ -39,7 +39,8 @@ class BaseForecaster:
         setattr(df, "source_path", shortened_path)
         self.data_source_path = df.source_path
 
-        self.rolling_predict_rows_to_refit = int(2*24*3600 / dut.get_timedelta(df=self.initial_df))
+        self.rolling_predict_rows_to_refit = int(7*24*3600 / dut.get_timedelta(df=self.initial_df))
+        self.time_between_rows = dut.get_timedelta(df=self.initial_df)
 
     def post_init(self):
         self.name = self.__class__.__name__
@@ -221,14 +222,16 @@ class CustomRandomForest(BaseForecaster):
 class CustomProphet(BaseForecaster):
     def __init__(self, df, h, additional_df_transformations, data_path, **kwargs):
         super().__init__(df, h, additional_df_transformations=additional_df_transformations, data_path=data_path)
+        self.only_fit_using_last_n_weeks = ONLY_FIT_USING_LAST_N_WEEKS
         self.post_init()
         self.kwargs = kwargs
 
         self.model = self.make_model()
+        
 
 
     def make_model(self):
-        model = Prophet(weekly_seasonality=20, daily_seasonality=10, **self.kwargs)
+        model = Prophet(weekly_seasonality=20, daily_seasonality=30, **self.kwargs)
         [model.add_regressor(c, mode="additive") for c in self.transformed_df.columns if c not in ["ds", "y"] and c.startswith("a_")]
         [model.add_regressor(c, mode="multiplicative") for c in self.transformed_df.columns if c not in ["ds", "y"] and c.startswith("m_")]
         return model
@@ -240,12 +243,16 @@ class CustomProphet(BaseForecaster):
         logworthy_attributes["features"] = self.features
         logworthy_attributes["weekly_seasonality"] = self.model.weekly_seasonality
         logworthy_attributes["daily_seasonality"] = self.model.daily_seasonality
+        logworthy_attributes["only_fit_using_last_n_weeks"] = self.only_fit_using_last_n_weeks
+        logworthy_attributes["rolling_predict_rows_to_refit"] = self.rolling_predict_rows_to_refit
+
         return logworthy_attributes
 
     def get_base_transformations(self):
         base_transforms = [dut.AddWeekends(), 
         dut.AddHolidays(),
-        dut.DuplicateColumns(prefixes=["a", "m"], exclude=["datetimes", "y"])]
+        dut.DuplicateColumns(prefixes=["a", "m"], exclude=["datetimes", "y"]),
+        dut.OnlyFitUsingLastNWeeks(weeks=self.only_fit_using_last_n_weeks)]
         return base_transforms
 
     def fit(self):
@@ -317,6 +324,11 @@ class CustomProphet(BaseForecaster):
             df = extended_train_X_df.copy(deep=True)
             df["y"] = extended_train_y_series
 
+            # account for sliding window
+            if self.only_fit_using_last_n_weeks > 0:
+                rows = int(self.only_fit_using_last_n_weeks*7*24*3600 / self.time_between_rows)
+                df = df.iloc[:-rows]
+
 
             # fit the new model
             new_model.fit(df)
@@ -329,10 +341,13 @@ class CustomSARIMAX(BaseForecaster):
         super().__init__(df, h, additional_df_transformations=additional_df_transformations, data_path=data_path)
 
         self.kwargs = kwargs
+        self.only_fit_using_last_n_weeks = ONLY_FIT_USING_LAST_N_WEEKS
+
         self.post_init()
         
         self.max_iter = 20
         self.model = self.make_model(df=self.train_df)
+        
     
     def make_model(self, df):
         td_between_rows = dut.get_timedelta(self.initial_df)
@@ -342,7 +357,7 @@ class CustomSARIMAX(BaseForecaster):
         y = y_series.values
         X = X_df.to_numpy()
 
-        return SARIMAX(endog=y, exog=X, order=(1,1,1), seasonal_order=(0,1,0,samples_per_day), **self.kwargs)
+        return SARIMAX(endog=y, exog=X, order=(1,1,1), seasonal_order=(0,0,0,samples_per_day), **self.kwargs)
 
     def logworthy_attributes(self):
         logworthy_attributes = super().logworthy_attributes()
@@ -351,6 +366,8 @@ class CustomSARIMAX(BaseForecaster):
         logworthy_attributes["SARIMAX_max_iter"] = self.max_iter
         logworthy_attributes["SARIMAX_order"] = self.model.order
         logworthy_attributes["SARIMAX_seasonal_order"] = self.model.seasonal_order
+        logworthy_attributes["only_fit_using_last_n_weeks"] = self.only_fit_using_last_n_weeks
+        logworthy_attributes["rolling_predict_rows_to_refit"] = self.rolling_predict_rows_to_refit
         
         return logworthy_attributes
 
@@ -360,6 +377,7 @@ class CustomSARIMAX(BaseForecaster):
                             dut.AddLastWeeksValue(h=self.h),
                             dut.AddYesterdaysValue(h=self.h),
                 dut.DatetimeConversion(),
+                dut.OnlyFitUsingLastNWeeks(weeks=self.only_fit_using_last_n_weeks),
                 dut.DropNaNs()]
         return base_transforms
 
@@ -422,6 +440,13 @@ class CustomSARIMAX(BaseForecaster):
 
             extended_df = extended_train_X_df.copy(deep=True)
             extended_df["y"] = extended_train_y_series
+
+
+            # account for sliding window
+            if self.only_fit_using_last_n_weeks > 0:
+                rows = int(self.only_fit_using_last_n_weeks*7*24*3600 / self.time_between_rows)
+                extended_df = extended_df.iloc[:-rows]
+
             # initialize the new model
             new_model = self.make_model(extended_df)
 

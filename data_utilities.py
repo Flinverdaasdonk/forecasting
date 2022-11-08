@@ -314,6 +314,27 @@ class OnlyKeepSpecificColumns(Transform):
         return df[self.columns]
 
 
+class OnlyFitUsingLastNWeeks(Transform):
+    def __init__(self, weeks, **kwargs):
+        super().__init__(**kwargs)
+        self.weeks = weeks
+
+    def __call__(self, df):
+        if self.weeks == 0:
+            return df
+            
+        total_seconds = self.weeks*7*24*3600
+        td = get_timedelta(df)
+
+        rows = int(total_seconds / td)
+
+        df = df.iloc[:-rows]
+
+        return df
+
+
+
+
 def get_timedelta(df):
     td = (df["datetimes"].iloc[1] - df["datetimes"].iloc[0]).total_seconds()
     return td  

@@ -11,16 +11,21 @@ def sweep_training_dataset_and_log(h):
     adt = []
     for i, data_path in enumerate(tut.yield_train_fns(h=h)):
         print(i)
-        df = dut.load_df(data_path)
-        m = tut.load_model(df, h, adt, data_path)
+        make_fit_log(data_path, h, adt)
 
-        tic = time.time()
-        m.fit()
-        elapsed = time.time() - tic
 
-        logs = {"time_to_fit": elapsed}
+def make_fit_log(data_path, h, adt):
+    df = dut.load_df(data_path)
+    m = tut.load_model(df, h, adt, data_path)
 
-        lut.make_and_save_logs(model=m, logs=logs)
+    tic = time.time()
+    m.fit()
+    elapsed = time.time() - tic
+
+    logs = {"time_to_fit": elapsed}
+
+    lut.make_and_save_logs(model=m, logs=logs)
+
 
 
 if __name__ == "__main__":
