@@ -328,7 +328,7 @@ class OnlyFitUsingLastNWeeks(Transform):
 
         rows = int(total_seconds / td)
 
-        df = df.iloc[:-rows]
+        df = df.iloc[-rows:]
 
         return df
 
