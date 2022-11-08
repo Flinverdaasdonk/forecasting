@@ -1,5 +1,6 @@
 scrappy_notebooks/*
 logs/*
+__pycache__/
 **/*.pyc
 *.*.pyc
 config.py
