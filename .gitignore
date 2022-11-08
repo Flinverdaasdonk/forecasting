@@ -1,6 +1,7 @@
 scrappy_notebooks/*
 logs/*
 **/*.pyc
+*.*.pyc
 config.py
 misc_datasets/*
 __pycache__/forecasting_models.cpython-37.pyc
