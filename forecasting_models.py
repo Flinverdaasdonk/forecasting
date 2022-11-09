@@ -327,7 +327,7 @@ class CustomProphet(BaseForecaster):
             # account for sliding window
             if self.only_fit_using_last_n_weeks > 0:
                 rows = int(self.only_fit_using_last_n_weeks*7*24*3600 / self.time_between_rows)
-                df = df.iloc[:-rows]
+                df = df.iloc[-rows:]
 
 
             # fit the new model
