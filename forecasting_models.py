@@ -147,7 +147,8 @@ class CustomRandomForest(BaseForecaster):
                 dut.DatetimeConversion(),
                 dut.AddYesterdaysValue(h=self.h), 
                 dut.AddLastWeeksValue(h=self.h), 
-                dut.DropNaNs()]
+                dut.DropNaNs(),
+                dut.StandardizeFeatures()]
         return base_transforms
 
     def fit(self):
@@ -252,7 +253,8 @@ class CustomProphet(BaseForecaster):
         base_transforms = [dut.AddWeekends(), 
         dut.AddHolidays(),
         dut.DuplicateColumns(prefixes=["a", "m"], exclude=["datetimes", "y"]),
-        dut.OnlyFitUsingLastNWeeks(weeks=self.only_fit_using_last_n_weeks)]
+        dut.OnlyFitUsingLastNWeeks(weeks=self.only_fit_using_last_n_weeks),
+        dut.StandardizeFeatures()]
         return base_transforms
 
     def fit(self):
@@ -378,7 +380,8 @@ class CustomSARIMAX(BaseForecaster):
                             dut.AddYesterdaysValue(h=self.h),
                 dut.DatetimeConversion(),
                 dut.OnlyFitUsingLastNWeeks(weeks=self.only_fit_using_last_n_weeks),
-                dut.DropNaNs()]
+                dut.DropNaNs(),
+                dut.StandardizeFeatures()]
         return base_transforms
 
     def fit(self):
@@ -464,8 +467,9 @@ class CustomSimpleRulesBased(BaseForecaster):
     def get_base_transformations(self):
         base_transforms = [dut.AddLastWeeksValue(h=self.h),
         dut.DropNaNs(),
-        dut.OnlyKeepSpecificColumns(columns=["last_weeks_y", "y"])
-        ]
+        dut.OnlyKeepSpecificColumns(columns=["last_weeks_y", "y"]),
+        dut.StandardizeFeatures()]
+        
         return base_transforms
 
     def fit(self):

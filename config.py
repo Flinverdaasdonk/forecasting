@@ -2,6 +2,7 @@ import sys
 import os
 
 
+
 WINDOWS_DATA_DIR = r"C:\Users\Flin\OneDrive - TU Eindhoven\Flin\Flin\01 - Uni\00_Internship\Nokia\00_Programming\forecasting\datasets"
 WINDOWS_MAIN_LOG_DIR = r"C:\Users\Flin\OneDrive - TU Eindhoven\Flin\Flin\01 - Uni\00_Internship\Nokia\00_Programming\forecasting\logs"
 
@@ -26,7 +27,7 @@ else:
 DATA_CATEGORIES = ["industrial", "residential_no_pv", "residential_with_pv"]
 TEST_CATEGORY = "industrial"
 
-TINY_TEST = False
+TINY_TEST = True
 TINY_TEST_BEGIN = 4*24*7*1
 TINY_TEST_END = 4*24*7*4
 

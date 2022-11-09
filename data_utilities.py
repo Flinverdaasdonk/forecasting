@@ -333,7 +333,28 @@ class OnlyFitUsingLastNWeeks(Transform):
         return df
 
 
+class StandardizeFeatures(Transform):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
+    def __call__(self, df):
+
+        for c in df.columns:
+            if c == "datetimes" or c == "ds":
+                continue
+
+            mean = df[c].mean()
+            std = df[c].std()
+            if std == 0:
+                std = df[c].values[0] # grab the first value in case it is constant
+                if std == 0:
+                    std = 1 # in case the first value is 0, just make this a 1
+        
+            values = df.loc[:, c].values
+            standardized_values = (values - mean)/std
+            df.loc[:, c] = standardized_values
+            
+        return df
 
 def get_timedelta(df):
     td = (df["datetimes"].iloc[1] - df["datetimes"].iloc[0]).total_seconds()

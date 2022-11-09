@@ -4,7 +4,9 @@ import training_utilities as tut
 import data_utilities as dut
 import logging_utilities as lut
 import time
+import warnings
 
+warnings.simplefilter(action="ignore", category=FutureWarning)
 
 def fit_eval_log(model):
     tic = time.time()
