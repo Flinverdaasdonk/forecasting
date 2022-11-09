@@ -203,8 +203,8 @@ class CustomRandomForest(BaseForecaster):
             yhat.extend(sub_yhat)
 
             # extend the training data
-            extended_train_X_df = extended_train_X_df.append(sub_test_X_df)
-            extended_train_y_series = extended_train_y_series.append(sub_test_y_series)
+            extended_train_X_df = pd.concat([extended_train_X_df, sub_test_X_df], ignore_index=True)
+            extended_train_y_series = pd.concat([extended_train_y_series, sub_test_y_series], ignore_index=True)
 
             # initialize the new model
             new_model = RandomForestRegressor(**self.kwargs)
@@ -314,8 +314,8 @@ class CustomProphet(BaseForecaster):
             yhat.extend(sub_yhat)
 
             # extend the training data
-            extended_train_X_df = extended_train_X_df.append(sub_test_X_df)
-            extended_train_y_series = extended_train_y_series.append(sub_test_y_series)
+            extended_train_X_df = pd.concat([extended_train_X_df, sub_test_X_df], ignore_index=True)
+            extended_train_y_series = pd.concat([extended_train_y_series, sub_test_y_series], ignore_index=True)
 
             # initialize the new model
             new_model = self.make_model()
@@ -435,8 +435,8 @@ class CustomSARIMAX(BaseForecaster):
             yhat.extend(sub_yhat)
 
             # extend the training data
-            extended_train_X_df = extended_train_X_df.append(sub_test_X_df)
-            extended_train_y_series = extended_train_y_series.append(sub_test_y_series)
+            extended_train_X_df = pd.concat([extended_train_X_df, sub_test_X_df], ignore_index=True)
+            extended_train_y_series = pd.concat([extended_train_y_series, sub_test_y_series], ignore_index=True)
 
             extended_df = extended_train_X_df.copy(deep=True)
             extended_df["y"] = extended_train_y_series
