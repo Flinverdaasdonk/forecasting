@@ -8,3 +8,9 @@ misc_datasets/*
 __pycache__/forecasting_models.cpython-37.pyc
 __pycache__/data_utilities.cpython-37.pyc
 __pycache__/visualization_utilities.cpython-37.pyc
+__pycache__/config.cpython-38.pyc
+__pycache__/data_utilities.cpython-38.pyc
+__pycache__/forecasting_models.cpython-38.pyc
+__pycache__/config.cpython-38.pyc
+__pycache__/data_utilities.cpython-38.pyc
+__pycache__/forecasting_models.cpython-38.pyc
