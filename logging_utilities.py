@@ -3,6 +3,18 @@ from pathlib import Path
 import json
 import evaluation_utilities as eut
 import time
+import sys
+import os
+
+# Disable
+def blockPrint():
+    sys.stdout = open(os.devnull, 'w')
+
+# Restore
+def enablePrint():
+    sys.stdout = sys.__stdout__
+
+
 
 def find_next_available_ID(log_dir=MAIN_LOG_DIR):
     files = [file for file in Path(log_dir).iterdir() if file.is_file()]
@@ -76,6 +88,8 @@ def make_and_save_logs(model, logs=None, get_x=True, get_y=True, get_yhat=True, 
     if TINY_TEST:
         logs["tiny_test_begin"] = TINY_TEST_BEGIN
         logs["tiny_test_end"]  = TINY_TEST_END
+
+    logs["os"] = str(sys.platform)
 
     save_logs(model, logs, log_dir)
 

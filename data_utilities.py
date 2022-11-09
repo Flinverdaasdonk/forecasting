@@ -341,7 +341,7 @@ def get_timedelta(df):
 
 def get_timedeltas(df):
     dts = df["datetimes"]
-    tds = [(dt1 - dt0).total_seconds() for dt1, dt0 in zip(dts[1:], dts[:-1])]
+    tds = [(dt1 - dt0).total_seconds() for dt1, dt0 in zip(dts.iloc[1:], dts.iloc[:-1])]
     return tds
 
 def load_df(path):

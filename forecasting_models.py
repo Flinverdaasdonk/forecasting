@@ -139,7 +139,7 @@ class CustomRandomForest(BaseForecaster):
         
 
     def make_model(self):
-        return RandomForestRegressor(**self.kwargs)
+        return RandomForestRegressor(n_jobs=N_CORES, **self.kwargs)
 
     def get_base_transformations(self):
         base_transforms = [dut.TimeseriesToRow(column_name=self.ts2row_column_name, 
