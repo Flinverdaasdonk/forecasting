@@ -37,15 +37,15 @@ def yield_all_fns(h, main_data_dir=MAIN_DATA_DIR):
         yield fn
 
 
-def load_model(df, h, adt, data_path):
+def load_model(model_type, df, h, adt, data_path):
     # ### INITIALIZE MODEL
-    if MODEL_TYPE == "RandomForest":
+    if model_type == "RandomForest":
         m = models.CustomRandomForest(df=df, h=h, additional_df_transformations=adt, data_path=data_path)
-    elif MODEL_TYPE == "SARIMAX":
+    elif model_type == "SARIMAX":
         m = models.CustomSARIMAX(df=df, h=h, additional_df_transformations=adt, data_path=data_path)
-    elif MODEL_TYPE == "Prophet":
+    elif model_type == "Prophet":
         m = models.CustomProphet(df=df, h=h, additional_df_transformations=adt, data_path=data_path)
-    elif MODEL_TYPE == "RulesBased":
+    elif model_type == "RulesBased":
         m = models.CustomSimpleRulesBased(df=df, h=h, additional_df_transformations=adt, data_path=data_path)
 
     else:

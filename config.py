@@ -6,8 +6,8 @@ import os
 WINDOWS_DATA_DIR = r"C:\Users\Flin\OneDrive - TU Eindhoven\Flin\Flin\01 - Uni\00_Internship\Nokia\00_Programming\forecasting\datasets"
 WINDOWS_MAIN_LOG_DIR = r"C:\Users\Flin\OneDrive - TU Eindhoven\Flin\Flin\01 - Uni\00_Internship\Nokia\00_Programming\forecasting\logs"
 
-LINUX_DATA_DIR = r""
-LINUX_MAIN_LOG_DIR = r""
+LINUX_DATA_DIR = r"datasets"
+LINUX_MAIN_LOG_DIR = r"logs"
 
 
 if 'win' in sys.platform:
@@ -27,7 +27,7 @@ else:
 DATA_CATEGORIES = ["industrial", "residential_no_pv", "residential_with_pv"]
 TEST_CATEGORY = "industrial"
 
-TINY_TEST = True
+TINY_TEST = False
 TINY_TEST_BEGIN = 4*24*7*1
 TINY_TEST_END = 4*24*7*4
 

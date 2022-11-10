@@ -5,8 +5,14 @@ import data_utilities as dut
 import logging_utilities as lut
 import time
 import warnings
+#from pandas.core.common import SettingWithCopyWarning
+from statsmodels.tools.sm_exceptions import ConvergenceWarning
 
 warnings.simplefilter(action="ignore", category=FutureWarning)
+warnings.simplefilter(action="ignore", category=ConvergenceWarning)
+warnings.simplefilter(action="ignore", category=UserWarning)
+
+
 
 def fit_eval_log(model):
     tic = time.time()
@@ -23,48 +29,99 @@ def fit_eval_log(model):
 
 
 
-def sweep(model_type, horizon):
+# def sweep(model_type, horizon):
 
-    if VERBOSE:
-        print(f"{model_type}, h={horizon}\n")
-    # number of files
-    n = len([None for _ in tut.yield_train_fns(h=horizon)])
-    adt = [] # additional data transformations
+#     if VERBOSE:
+#         print(f"{model_type}, h={horizon}\n")
+#     # number of files
+#     n = len([None for _ in tut.yield_train_fns(h=horizon)])
+#     adt = [] # additional data transformations
 
-    for i, data_path in enumerate(tut.yield_train_fns(h=horizon)):
-        if TINY_TEST:
-            # 
-            if i % 15 != 0:
-                continue
+#     for i, data_path in enumerate(tut.yield_train_fns(h=horizon)):
+#         if TINY_TEST:
+#             # 
+#             if i % 15 != 0:
+#                 continue
 
-        try:
-            if VERBOSE:
-                print(f"{i}/{n}")
+#         try:
+#             if VERBOSE:
+#                 print(f"{i}/{n}")
 
-            df = dut.load_df(data_path)
-            m = tut.load_model(df, horizon, adt, data_path)
+#             df = dut.load_df(data_path)
+#             m = tut.load_model(model_type, df, horizon, adt, data_path)
 
-            fit_eval_log(model=m)
-
-
-        except Exception as e:
-            lut.enablePrint()
-            print(f"-----\n ERROR WITH: {model_type} \n at h={horizon} \n for file{data_path}. \n error is: \n {e} \n ------ \n")
+#             fit_eval_log(model=m)
 
 
-def super_sweep():
-    model_types = ["RandomForest", "SARIMAX", "Prophet", "RulesBased"]
+#         except Exception as e:
+#             lut.enablePrint()
+#             print(f"-----\n ERROR WITH: {m.name} \n at h={horizon} \n for file{data_path}. \n error is: \n {e} \n ------ \n")
+
+def super_sweep_Prophet():
+    super_sweep_model_type(model_type="Prophet")
+
+def super_sweep_SARIMAX():
+    super_sweep_model_type(model_type="SARIMAX")
+
+def super_sweep_RF():
+    super_sweep_model_type(model_type="RandomForest")
+
+def super_sweep_model_type(model_type):
+    print("Inside 'super_sweep_model_type'")
+    model_types = [model_type]
     horizons = [2, 6]
 
+    adt = []
 
-    for model_type in model_types:
-        for horizon in horizons:
-            sweep(model_type, horizon)
+    for horizon in horizons:
+        print("Inside 'horizon for loop'")
+        n = len(model_types)*len([None for _ in tut.yield_train_fns(h=horizon)])
+
+        for i, data_path in enumerate(tut.yield_train_fns(h=horizon)):
+            print("Inside 'yield_train_fns loop'")
+            if TINY_TEST:
+                # 
+                if i % 15 != 0:
+                    continue
+
+            for i2, model_type in enumerate(model_types):
+                print("Inside 'model_types loop'")
+                try:
+                    if VERBOSE:
+                        print(f"{i*len(model_types)+i2}/{n}: {model_type}, h={horizon} ")
+
+                    df = dut.load_df(data_path)
+                    m = tut.load_model(model_type, df, horizon, adt, data_path)
+
+                    fit_eval_log(model=m)
+
+
+                except Exception as e:
+                    lut.enablePrint()
+                    print(f"-----\n ERROR WITH: {m.name} \n at h={horizon} \n for file{data_path}. \n error is: \n {e} \n ------ \n")
+
 
 if __name__ == "__main__":
     VERBOSE = 1
+    arg = int(sys.argv[1])
 
-    super_sweep()
+    print(f"model_type={arg}")
+
+    if arg == 0:
+        print("Sweeping Prophet")
+        super_sweep_Prophet()
+    
+    elif arg == 1:
+        print("Sweeping RFR")
+        super_sweep_RF()
+
+    elif arg == 2:
+        print("Sweeping SARIMAX")
+        super_sweep_SARIMAX()
+
+
+    print("Done!")
+
     
     # if 'win' in sys.platform: 
     #     model_type = MODEL_TYPE

@@ -10,6 +10,13 @@ import numpy as np
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 from config import *
 
+import logging
+
+cmdstanpy_logger = logging.getLogger("cmdstanpy")
+
+cmdstanpy_logger.disabled = True
+
+
 class BaseForecaster:
     def __init__(self, df, h, additional_df_transformations, data_path, split=TRAIN_EVAL_SPLIT):
         if additional_df_transformations is None:
@@ -448,7 +455,7 @@ class CustomSARIMAX(BaseForecaster):
             # account for sliding window
             if self.only_fit_using_last_n_weeks > 0:
                 rows = int(self.only_fit_using_last_n_weeks*7*24*3600 / self.time_between_rows)
-                extended_df = extended_df.iloc[:-rows]
+                extended_df = extended_df.iloc[-rows:]
 
             # initialize the new model
             new_model = self.make_model(extended_df)
@@ -469,7 +476,7 @@ class CustomSimpleRulesBased(BaseForecaster):
         dut.DropNaNs(),
         dut.OnlyKeepSpecificColumns(columns=["last_weeks_y", "y"]),
         dut.StandardizeFeatures()]
-        
+
         return base_transforms
 
     def fit(self):
