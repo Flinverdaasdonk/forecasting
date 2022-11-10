@@ -334,22 +334,27 @@ class OnlyFitUsingLastNWeeks(Transform):
 
 
 class StandardizeFeatures(Transform):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, train_eval_split):
+        super().__init__()
+        self.train_eval_split = train_eval_split
 
     def __call__(self, df):
-
-        for c in df.columns:
+        
+        n = int(len(df)*self.train_eval_split)
+        train_df = df.iloc[:n]
+        for c in train_df.columns:
             if c == "datetimes" or c == "ds":
                 continue
 
-            mean = df[c].mean()
-            std = df[c].std()
+            # calculate mean and std using only train_df
+            mean = train_df[c].mean()
+            std = train_df[c].std()
             if std == 0:
-                std = df[c].values[0] # grab the first value in case it is constant
+                std = train_df[c].values[0] # grab the first value in case it is constant
                 if std == 0:
                     std = 1 # in case the first value is 0, just make this a 1
         
+            # apply standardization to the whole df (not only to train df)
             values = df.loc[:, c].values
             standardized_values = (values - mean)/std
             df.loc[:, c] = standardized_values
