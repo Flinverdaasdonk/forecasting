@@ -133,6 +133,7 @@ class CustomRandomForest(BaseForecaster):
 
         self.ts2row_history_window = 5
         self.ts2row_column_name = "load_profile"
+        self.only_fit_using_last_n_weeks = ONLY_FIT_USING_LAST_N_WEEKS
 
         self.post_init()
 
@@ -142,6 +143,7 @@ class CustomRandomForest(BaseForecaster):
 
         logworthy_attributes["features"] = self.features
         logworthy_attributes["ts2row_history_window"] = self.ts2row_history_window
+        logworthy_attributes["only_fit_using_last_n_weeks"] = self.only_fit_using_last_n_weeks
         return logworthy_attributes
         
 
@@ -155,7 +157,7 @@ class CustomRandomForest(BaseForecaster):
                 dut.AddYesterdaysValue(h=self.h), 
                 dut.AddLastWeeksValue(h=self.h), 
                 dut.DropNaNs(),
-                dut.StandardizeFeatures()]
+                dut.StandardizeFeatures(train_eval_split=self.split)]
         return base_transforms
 
     def fit(self):
@@ -217,6 +219,12 @@ class CustomRandomForest(BaseForecaster):
             # initialize the new model
             new_model = RandomForestRegressor(**self.kwargs)
 
+            # account for sliding window
+            if self.only_fit_using_last_n_weeks > 0:
+                rows = int(self.only_fit_using_last_n_weeks*7*24*3600 / self.time_between_rows)
+                extended_train_X_df = extended_train_X_df.iloc[-rows:]
+                extended_train_y_series = extended_train_y_series.iloc[-rows:]
+
             # prepare data for the new model
             new_X = extended_train_X_df.to_numpy()
             new_y = extended_train_y_series.values
@@ -261,7 +269,7 @@ class CustomProphet(BaseForecaster):
         dut.AddHolidays(),
         dut.DuplicateColumns(prefixes=["a", "m"], exclude=["datetimes", "y"]),
         dut.OnlyFitUsingLastNWeeks(weeks=self.only_fit_using_last_n_weeks),
-        dut.StandardizeFeatures()]
+        dut.StandardizeFeatures(train_eval_split=self.split)]
         return base_transforms
 
     def fit(self):
@@ -388,7 +396,7 @@ class CustomSARIMAX(BaseForecaster):
                 dut.DatetimeConversion(),
                 dut.OnlyFitUsingLastNWeeks(weeks=self.only_fit_using_last_n_weeks),
                 dut.DropNaNs(),
-                dut.StandardizeFeatures()]
+                dut.StandardizeFeatures(train_eval_split=self.split)]
         return base_transforms
 
     def fit(self):
@@ -475,7 +483,7 @@ class CustomSimpleRulesBased(BaseForecaster):
         base_transforms = [dut.AddLastWeeksValue(h=self.h),
         dut.DropNaNs(),
         dut.OnlyKeepSpecificColumns(columns=["last_weeks_y", "y"]),
-        dut.StandardizeFeatures()]
+        dut.StandardizeFeatures(train_eval_split=self.split)]
 
         return base_transforms
 

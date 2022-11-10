@@ -102,22 +102,10 @@ def super_sweep_model_type(model_type):
 
 
 if __name__ == "__main__":
+
     VERBOSE = 1
-    arg = int(sys.argv[1])
 
-    print(f"model_type={arg}")
-
-    if arg == 0:
-        print("Sweeping Prophet")
-        super_sweep_Prophet()
-    
-    elif arg == 1:
-        print("Sweeping RFR")
-        super_sweep_RF()
-
-    elif arg == 2:
-        print("Sweeping SARIMAX")
-        super_sweep_SARIMAX()
+    super_sweep_SARIMAX()
 
 
     print("Done!")

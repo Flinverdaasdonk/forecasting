@@ -337,13 +337,14 @@ class StandardizeFeatures(Transform):
     def __init__(self, train_eval_split):
         super().__init__()
         self.train_eval_split = train_eval_split
+        self.ignore_columns = ["datetimes", "ds", "is_weekend", "is_holiday", 'month_sines', 'month_cosines', 'hour_sines', 'hour_cosines', "week_sines", "week_cosines"]
 
     def __call__(self, df):
         
         n = int(len(df)*self.train_eval_split)
         train_df = df.iloc[:n]
         for c in train_df.columns:
-            if c == "datetimes" or c == "ds":
+            if c in self.ignore_columns:
                 continue
 
             # calculate mean and std using only train_df
