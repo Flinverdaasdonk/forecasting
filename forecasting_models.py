@@ -52,10 +52,9 @@ class BaseForecaster:
         self.data_source_path = df.source_path
 
         self.time_between_rows = dut.get_timedelta(df=self.initial_df)
-        self.rolling_predict_rows_to_refit = int(7*24*3600 / self.time_between_rows)
+        self.rolling_predict_rows_to_refit = int(ROLLING_PREDICT_DAYS_TO_REFIT*24*3600 / self.time_between_rows)
 
         self.ending_transformations = [dut.DropNaNs(),
-                dut.RemoveConstantColumns(),
                 dut.StandardizeFeatures(train_eval_split=self.split)]
         
 
@@ -140,11 +139,13 @@ class CustomRandomForest(BaseForecaster):
     def __init__(self, df, h, additional_df_transformations, data_path, **kwargs):
         super().__init__(df, h, additional_df_transformations=additional_df_transformations, data_path=data_path)
         self.kwargs = kwargs
+        self.n_cores = N_CORES
         self.model = self.make_model()
 
         self.ts2row_history_window = 4
         self.ts2row_column_name = "load_profile"
         self.only_fit_using_last_n_weeks = ONLY_FIT_USING_LAST_N_WEEKS
+        
 
         self.post_init()
 
@@ -153,13 +154,14 @@ class CustomRandomForest(BaseForecaster):
         logworthy_attributes = {**logworthy_attributes, **self.kwargs}
 
         logworthy_attributes["features"] = self.features
+        logworthy_attributes["n_cores"] = self.n_cores
         logworthy_attributes["ts2row_history_window"] = self.ts2row_history_window
         logworthy_attributes["only_fit_using_last_n_weeks"] = self.only_fit_using_last_n_weeks
         return logworthy_attributes
         
 
     def make_model(self):
-        return RandomForestRegressor(n_jobs=N_CORES, max_features=0.9, max_samples=0.9, **self.kwargs)
+        return RandomForestRegressor(n_jobs=self.n_cores, max_features=0.9, max_samples=0.9, **self.kwargs)
 
     def get_base_transformations(self):
         base_transforms = [dut.TimeseriesToRow(column_name=self.ts2row_column_name, 
@@ -226,7 +228,7 @@ class CustomRandomForest(BaseForecaster):
             extended_train_y_series = pd.concat([extended_train_y_series, sub_test_y_series], ignore_index=True)
 
             # initialize the new model
-            new_model = RandomForestRegressor(**self.kwargs)
+            new_model = self.make_model()
 
             # account for sliding window
             if self.only_fit_using_last_n_weeks > 0:
@@ -247,7 +249,7 @@ class CustomRandomForest(BaseForecaster):
 class CustomProphet(BaseForecaster):
     def __init__(self, df, h, additional_df_transformations, data_path, **kwargs):
         super().__init__(df, h, additional_df_transformations=additional_df_transformations, data_path=data_path)
-        self.only_fit_using_last_n_weeks = ONLY_FIT_USING_LAST_N_WEEKS
+        self.only_fit_using_last_n_weeks = PROPHET_ONLY_FIT_USING_LAST_N_WEEKS
         self.post_init()
         self.kwargs = kwargs
 
@@ -270,6 +272,8 @@ class CustomProphet(BaseForecaster):
         logworthy_attributes["daily_seasonality"] = self.model.daily_seasonality
         logworthy_attributes["only_fit_using_last_n_weeks"] = self.only_fit_using_last_n_weeks
         logworthy_attributes["rolling_predict_rows_to_refit"] = self.rolling_predict_rows_to_refit
+
+        logworthy_attributes["n_cores"] = 1
 
         return logworthy_attributes
 
@@ -366,7 +370,7 @@ class CustomSARIMAX(BaseForecaster):
         super().__init__(df, h, additional_df_transformations=additional_df_transformations, data_path=data_path)
 
         self.kwargs = kwargs
-        self.only_fit_using_last_n_weeks = ONLY_FIT_USING_LAST_N_WEEKS
+        self.only_fit_using_last_n_weeks = SARIMAX_ONLY_FIT_USING_LAST_N_WEEKS
 
         self.post_init()
         
@@ -382,11 +386,13 @@ class CustomSARIMAX(BaseForecaster):
         y = y_series.values
         X = X_df.to_numpy()
 
-        return SARIMAX(endog=y, exog=X, order=(1,1,1), seasonal_order=(0,0,0,samples_per_day), **self.kwargs)
+        return SARIMAX(endog=y, exog=X, order=(1,1,1), seasonal_order=(1,0,0,samples_per_day), **self.kwargs)
 
     def logworthy_attributes(self):
         logworthy_attributes = super().logworthy_attributes()
         logworthy_attributes = {**logworthy_attributes, **self.kwargs}
+
+        logworthy_attributes["n_cores"] = 1
 
         logworthy_attributes["SARIMAX_max_iter"] = self.max_iter
         logworthy_attributes["SARIMAX_order"] = self.model.order
@@ -480,7 +486,7 @@ class CustomSARIMAX(BaseForecaster):
 
         return yhat
 
-class CustomSimpleRulesBased(BaseForecaster):
+class CustomNaiveLastWeek(BaseForecaster):
     def __init__(self, df, h, additional_df_transformations, data_path):
         super().__init__(df, h, additional_df_transformations, data_path=data_path)
         self.post_init()
@@ -510,9 +516,45 @@ class CustomSimpleRulesBased(BaseForecaster):
         
         return X_df, y_series
 
+class CustomNaiveYesterday(BaseForecaster):
+    def __init__(self, df, h, additional_df_transformations, data_path):
+        super().__init__(df, h, additional_df_transformations, data_path=data_path)
+        self.post_init()
+
+    def get_base_transformations(self):
+        base_transforms = [dut.AddYesterdaysValue(h=self.h),
+        dut.OnlyKeepSpecificColumns(columns=["yesterdays_y", "y"]),]
+
+        return base_transforms
+
+    def fit(self):
+        pass
+
+
+    def predict(self, predict_on_test=True, rolling_prediction=True):
+        if predict_on_test:
+            X_df, y_series = self.final_df_preprocessing(df=self.test_df)
+        else:
+            X_df, y_series = self.final_df_preprocessing(df=self.train_df)
+
+        yhat = X_df["yesterdays_y"].values
+        return yhat
+
+    def final_df_preprocessing(self, df):
+        y_series = df["y"]
+        X_df = df.drop(columns="y")
+        
+        return X_df, y_series
+
+
+
 class CustomLSTM(BaseForecaster):
     def __init__(self, df, h, additional_df_transformations, data_path, **kwargs):
         super().__init__(df, h, additional_df_transformations=additional_df_transformations, data_path=data_path)
+
+        self.n_cores = N_CORES
+
+        torch.set_num_threads(self.n_cores)
 
         self.kwargs = kwargs
         self.only_fit_using_last_n_weeks = ONLY_FIT_USING_LAST_N_WEEKS
@@ -546,11 +588,18 @@ class CustomLSTM(BaseForecaster):
         self.old_transformed_df = self.transformed_df.copy(deep=True)
         self.transformed_df = self.transformed_df.iloc[self.window_size-1:]  # reduce this such that the first label of train_inout matches to the first "y" of self.transformed_df
         
-        ys1 = [np.round(y.item(), 4) for _, y in inout]
-        ys2 = [np.round(_y, 4) for _y in self.transformed_df["y"].values]
+        ys1 = [np.round(y.item(), 3) for _, y in inout]
+        ys2 = [np.round(_y, 3) for _y in self.transformed_df["y"].values]
 
-        assert all(y1 == y2 for y1, y2 in zip(ys1, ys2))
         assert len(ys1) == len(ys2)
+
+        for y1, y2 in zip(ys1, ys2):
+            if y1 != y2:
+                raise Exception
+        
+
+
+        
 
         
 
@@ -627,6 +676,7 @@ class CustomLSTM(BaseForecaster):
         logworthy_attributes["only_fit_using_last_n_weeks"] = self.only_fit_using_last_n_weeks
 
         logworthy_attributes["n_train_epochs"] = self.n_train_epochs
+        logworthy_attributes["n_cores"] = self.n_cores
 
         logworthy_attributes["learning_rate"] = self.learning_rate
         logworthy_attributes["learning_rate_scheduler_enabled"] = self.learning_rate_scheduler_enabled
@@ -643,7 +693,9 @@ class CustomLSTM(BaseForecaster):
 
     def predict(self, predict_on_test=True, rolling_prediction=False):   
         if rolling_prediction:
-            raise NotImplementedError
+            rolling_prediction = False
+            print("Rolling Prediction for LSTM is NOT implemented; continuing on to regular forecasts.")
+
 
         if predict_on_test:
             y = self.lstm_forecast(inout=self.test_inout)

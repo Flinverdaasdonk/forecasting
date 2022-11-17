@@ -5,7 +5,7 @@ import numpy as np
 class LSTM(nn.Module):
     def __init__(self, input_size, hidden_layer_sizes=[16, 8], output_size=1):
         super().__init__()
-        self.non_linearity = nn.Tanh
+        self.non_linearities = [nn.Tanh, nn.LeakyReLU]
 
 
         if not isinstance(hidden_layer_sizes, list):
@@ -25,8 +25,8 @@ class LSTM(nn.Module):
 
         linear_layers = []
 
-        for ls0, ls1 in zip(layer_sizes[:-1], layer_sizes[1:]):
-            linear_layers.append(self.non_linearity())
+        for nl, ls0, ls1 in zip(self.non_linearities, layer_sizes[:-1], layer_sizes[1:]):
+            linear_layers.append(nl())
             linear_layers.append(nn.Linear(ls0, ls1))
 
         self.layer_sizes = layer_sizes

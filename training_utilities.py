@@ -38,17 +38,20 @@ def yield_all_fns(h, main_data_dir=MAIN_DATA_DIR):
 
 
 def load_model(model_type, df, h, adt, data_path):
+    
     # ### INITIALIZE MODEL
     if model_type == "RandomForest":
-        m = models.CustomRandomForest(df=df, h=h, additional_df_transformations=adt, data_path=data_path)
+        m = models.CustomRandomForest(df=df, h=h, additional_df_transformations=adt, data_path=data_path, n_estimators=200)
     elif model_type == "SARIMAX":
         m = models.CustomSARIMAX(df=df, h=h, additional_df_transformations=adt, data_path=data_path)
     elif model_type == "Prophet":
         m = models.CustomProphet(df=df, h=h, additional_df_transformations=adt, data_path=data_path)
     elif model_type == "LSTM":
         m = models.CustomLSTM(df=df, h=h, additional_df_transformations=adt, data_path=data_path)
-    elif model_type == "RulesBased":
-        m = models.CustomSimpleRulesBased(df=df, h=h, additional_df_transformations=adt, data_path=data_path)
+    elif model_type == "LastWeeks":
+        m = models.CustomNaiveLastWeek(df=df, h=h, additional_df_transformations=adt, data_path=data_path)
+    elif model_type == "Yesterdays":
+        m = models.CustomNaiveYesterday(df=df, h=h, additional_df_transformations=adt, data_path=data_path)
 
     else:
         raise NotImplementedError

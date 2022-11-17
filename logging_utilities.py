@@ -67,6 +67,7 @@ def make_and_save_logs(model, logs=None, get_x=True, get_y=True, get_yhat=True, 
         y = eut.get_y(model)
         y = [float(_y) for _y in y]
         logs["y"] = y
+
     if get_yhat:
 
         tic = time.time()
@@ -90,6 +91,7 @@ def make_and_save_logs(model, logs=None, get_x=True, get_y=True, get_yhat=True, 
         logs["tiny_test_end"]  = TINY_TEST_END
 
     logs["os"] = str(sys.platform)
+    logs["time_at_saving"] = repr(time.ctime())
 
     save_logs(model, logs, log_dir)
 
