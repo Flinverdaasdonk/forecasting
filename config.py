@@ -27,12 +27,12 @@ else:
 DATA_CATEGORIES = ["industrial", "residential_no_pv", "residential_with_pv"]
 TEST_CATEGORY = "industrial"
 
-TINY_TEST = False
+TINY_TEST = True
 TINY_TEST_BEGIN = 4*24*7*1
 TINY_TEST_END = 4*24*7*4
 
 ONLY_FIT_USING_LAST_N_WEEKS = 0
-ROLLING_PREDICTION = True
+ROLLING_PREDICTION = False
 TRAIN_EVAL_SPLIT = 0.7
 HORIZON = 2
-MODEL_TYPE = "RandomForest"  # "RandomForest", "SARIMAX", "Prophet", "RulesBased"
+MODEL_TYPE = "LSTM"  # "RandomForest", "SARIMAX", "Prophet", "RulesBased"

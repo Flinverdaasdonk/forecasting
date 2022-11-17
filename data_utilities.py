@@ -362,6 +362,26 @@ class StandardizeFeatures(Transform):
             
         return df
 
+class RemoveConstantColumns(Transform):
+    def __init__(self, ignore_columns=[]):
+        super().__init__()
+        ignore_columns = ["datetimes", "ds", "y"] + ignore_columns
+        self.ignore_columns = set(ignore_columns)
+
+    def __call__(self, df):
+        for c in df.columns:
+            values = list(df[c].values)
+
+            # grab the set, i.e. all the unique values
+            unique_values = set(values)
+
+            # if there is only one value in the set, the series is constant
+            if len(unique_values) == 1:
+                # in which case, drop this column
+                df = df.drop(columns=[c])
+
+        return df
+
 def get_timedelta(df):
     td = (df["datetimes"].iloc[1] - df["datetimes"].iloc[0]).total_seconds()
     return td  

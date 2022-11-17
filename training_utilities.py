@@ -45,6 +45,8 @@ def load_model(model_type, df, h, adt, data_path):
         m = models.CustomSARIMAX(df=df, h=h, additional_df_transformations=adt, data_path=data_path)
     elif model_type == "Prophet":
         m = models.CustomProphet(df=df, h=h, additional_df_transformations=adt, data_path=data_path)
+    elif model_type == "LSTM":
+        m = models.CustomLSTM(df=df, h=h, additional_df_transformations=adt, data_path=data_path)
     elif model_type == "RulesBased":
         m = models.CustomSimpleRulesBased(df=df, h=h, additional_df_transformations=adt, data_path=data_path)
 

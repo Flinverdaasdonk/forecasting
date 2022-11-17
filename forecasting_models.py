@@ -2,12 +2,16 @@ from sklearn.ensemble import RandomForestRegressor
 from prophet import Prophet
 import datetime
 import data_utilities as dut
+import deep_learning_utilities as dlut
 import joblib
 import matplotlib.pyplot as plt
 import pandas as pd
 from pathlib import Path
 import numpy as np
 from statsmodels.tsa.statespace.sarimax import SARIMAX
+import torch
+import torch.nn as nn
+from torch.optim.swa_utils import AveragedModel
 from config import *
 
 import logging
@@ -29,8 +33,9 @@ class BaseForecaster:
         self.h = h
         self.additional_df_transformations = adt
         self.initial_df = df.copy(deep=True)
-        self.initial_df["datetimes"] = [pd.to_datetime(dt) for dt in self.initial_df["datetimes"]]
 
+        # self.initial_df["datetimes"] = [pd.to_datetime(dt) for dt in self.initial_df["datetimes"]]
+        self.initial_df["datetimes"] = pd.to_datetime([dt for dt in self.initial_df["datetimes"]])
 
         self.index_to_dts = {i: dt for i, dt in zip(list(self.initial_df.index), list(self.initial_df["datetimes"]))}
 
@@ -46,8 +51,13 @@ class BaseForecaster:
         setattr(df, "source_path", shortened_path)
         self.data_source_path = df.source_path
 
-        self.rolling_predict_rows_to_refit = int(7*24*3600 / dut.get_timedelta(df=self.initial_df))
         self.time_between_rows = dut.get_timedelta(df=self.initial_df)
+        self.rolling_predict_rows_to_refit = int(7*24*3600 / self.time_between_rows)
+
+        self.ending_transformations = [dut.DropNaNs(),
+                dut.RemoveConstantColumns(),
+                dut.StandardizeFeatures(train_eval_split=self.split)]
+        
 
     def post_init(self):
         self.name = self.__class__.__name__
@@ -64,12 +74,13 @@ class BaseForecaster:
         self.features = list(X_df.columns)
 
     def get_data_transformations(self):
-        return self.get_base_transformations() + self.additional_df_transformations
+        return self.get_base_transformations() + self.additional_df_transformations + self.ending_transformations
 
     def get_corresponding_dts(self, df):
         idxs = list(df.index)
         dts = [self.index_to_dts[idx] for idx in idxs]
         return dts
+
 
     def get_test_dts(self):
         dts = self.get_corresponding_dts(df=self.test_df)
@@ -97,8 +108,8 @@ class BaseForecaster:
             else:
                 raise ValueError("The timedeltas between consecutive steps is inconsistent")
         
-            n_years = self.initial_df["datetimes"].iloc[-1].year - self.initial_df["datetimes"].iloc[0].year + 1
-            assert n_clock_shifts <= 2*n_years
+        n_years = self.initial_df["datetimes"].iloc[-1].year - self.initial_df["datetimes"].iloc[0].year + 1
+        assert n_clock_shifts <= 2*n_years
 
     def final_df_preprocessing(self, df):
         raise NotImplementedError
@@ -131,7 +142,7 @@ class CustomRandomForest(BaseForecaster):
         self.kwargs = kwargs
         self.model = self.make_model()
 
-        self.ts2row_history_window = 5
+        self.ts2row_history_window = 4
         self.ts2row_column_name = "load_profile"
         self.only_fit_using_last_n_weeks = ONLY_FIT_USING_LAST_N_WEEKS
 
@@ -148,16 +159,14 @@ class CustomRandomForest(BaseForecaster):
         
 
     def make_model(self):
-        return RandomForestRegressor(n_jobs=N_CORES, **self.kwargs)
+        return RandomForestRegressor(n_jobs=N_CORES, max_features=0.9, max_samples=0.9, **self.kwargs)
 
     def get_base_transformations(self):
         base_transforms = [dut.TimeseriesToRow(column_name=self.ts2row_column_name, 
                 history_window=self.ts2row_history_window), 
                 dut.DatetimeConversion(),
                 dut.AddYesterdaysValue(h=self.h), 
-                dut.AddLastWeeksValue(h=self.h), 
-                dut.DropNaNs(),
-                dut.StandardizeFeatures(train_eval_split=self.split)]
+                dut.AddLastWeeksValue(h=self.h)]
         return base_transforms
 
     def fit(self):
@@ -248,8 +257,8 @@ class CustomProphet(BaseForecaster):
 
     def make_model(self):
         model = Prophet(weekly_seasonality=20, daily_seasonality=30, **self.kwargs)
-        [model.add_regressor(c, mode="additive") for c in self.transformed_df.columns if c not in ["ds", "y"] and c.startswith("a_")]
-        [model.add_regressor(c, mode="multiplicative") for c in self.transformed_df.columns if c not in ["ds", "y"] and c.startswith("m_")]
+        [model.add_regressor(c, standardize=False, mode="additive") for c in self.transformed_df.columns if c not in ["ds", "y"] and c.startswith("a_")]
+        [model.add_regressor(c, standardize=False, mode="multiplicative") for c in self.transformed_df.columns if c not in ["ds", "y"] and c.startswith("m_")]
         return model
 
     def logworthy_attributes(self):
@@ -268,8 +277,7 @@ class CustomProphet(BaseForecaster):
         base_transforms = [dut.AddWeekends(), 
         dut.AddHolidays(),
         dut.DuplicateColumns(prefixes=["a", "m"], exclude=["datetimes", "y"]),
-        dut.OnlyFitUsingLastNWeeks(weeks=self.only_fit_using_last_n_weeks),
-        dut.StandardizeFeatures(train_eval_split=self.split)]
+        dut.OnlyFitUsingLastNWeeks(weeks=self.only_fit_using_last_n_weeks)]
         return base_transforms
 
     def fit(self):
@@ -394,9 +402,7 @@ class CustomSARIMAX(BaseForecaster):
                             dut.AddLastWeeksValue(h=self.h),
                             dut.AddYesterdaysValue(h=self.h),
                 dut.DatetimeConversion(),
-                dut.OnlyFitUsingLastNWeeks(weeks=self.only_fit_using_last_n_weeks),
-                dut.DropNaNs(),
-                dut.StandardizeFeatures(train_eval_split=self.split)]
+                dut.OnlyFitUsingLastNWeeks(weeks=self.only_fit_using_last_n_weeks),]
         return base_transforms
 
     def fit(self):
@@ -481,9 +487,7 @@ class CustomSimpleRulesBased(BaseForecaster):
 
     def get_base_transformations(self):
         base_transforms = [dut.AddLastWeeksValue(h=self.h),
-        dut.DropNaNs(),
-        dut.OnlyKeepSpecificColumns(columns=["last_weeks_y", "y"]),
-        dut.StandardizeFeatures(train_eval_split=self.split)]
+        dut.OnlyKeepSpecificColumns(columns=["last_weeks_y", "y"]),]
 
         return base_transforms
 
@@ -505,6 +509,166 @@ class CustomSimpleRulesBased(BaseForecaster):
         X_df = df.drop(columns="y")
         
         return X_df, y_series
+
+class CustomLSTM(BaseForecaster):
+    def __init__(self, df, h, additional_df_transformations, data_path, **kwargs):
+        super().__init__(df, h, additional_df_transformations=additional_df_transformations, data_path=data_path)
+
+        self.kwargs = kwargs
+        self.only_fit_using_last_n_weeks = ONLY_FIT_USING_LAST_N_WEEKS
+
+        self.post_init()
+        
+        self.model = self.make_model(df=self.train_df)
+        
+        self.only_fit_using_last_n_weeks = ONLY_FIT_USING_LAST_N_WEEKS
+
+        self.n_train_epochs = 4
+
+        self.learning_rate = 0.001
+        self.learning_rate_scheduler_enabled = True
+        self.learning_rate_decay_factor = 10
+
+        self.window_size = 8
+
+        self.swa_enabled = True
+        self.swa_start = 1
+
+        assert self.swa_enabled, "Otherwise predict is not fully implemented"
+
+        inout = dlut.lazy_create_inout_sequences(self.transformed_df, tw=self.window_size)
+
+        n = int(self.split*len(self.transformed_df)) - self.window_size
+        
+        self.train_inout = inout[:n]
+        self.test_inout = inout[n:] 
+
+        self.old_transformed_df = self.transformed_df.copy(deep=True)
+        self.transformed_df = self.transformed_df.iloc[self.window_size-1:]  # reduce this such that the first label of train_inout matches to the first "y" of self.transformed_df
+        
+        ys1 = [np.round(y.item(), 4) for _, y in inout]
+        ys2 = [np.round(_y, 4) for _y in self.transformed_df["y"].values]
+
+        assert all(y1 == y2 for y1, y2 in zip(ys1, ys2))
+        assert len(ys1) == len(ys2)
+
+        
+
+    def make_model(self, df):
+        n_columns = len(df.columns)
+        for c in ["y", "datetimes"]:
+            if c in df.columns:
+                n_columns -= 1
+
+        return dlut.LSTM(input_size=n_columns)
+
+    def final_df_preprocessing(self, df):
+        df = df.copy(deep=True)
+        y_series = df["y"]
+        X_df = df.drop(columns=["y"])
+
+        if "datetimes" in X_df.columns:
+            X_df = X_df.drop(columns=["datetimes"])
+
+        return X_df, y_series
+
+    def fit(self):
+
+        train_inout = self.train_inout
+
+        if self.swa_enabled:
+            self.swa_model = AveragedModel(self.model)
+
+        loss_function = nn.MSELoss()
+        optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate, weight_decay=min(1e-5, self.learning_rate/2))
+
+        if self.learning_rate_scheduler_enabled:
+            lr_scheduler = torch.optim.lr_scheduler.LinearLR(optimizer, start_factor=1, end_factor=0.1, total_iters=self.n_train_epochs, last_epoch=- 1, verbose=False)
+
+        noise_levels = np.linspace(0.001, 0.005, self.n_train_epochs)
+
+        for ep in range(self.n_train_epochs):
+            for tr_i, (seq, labels) in enumerate(train_inout):
+
+                seq += noise_levels[ep]*torch.randn(seq.shape)
+
+                optimizer.zero_grad()
+
+                y_pred = self.model(seq)
+
+                single_loss = loss_function(y_pred, labels)
+
+                single_loss.backward()
+                optimizer.step()   
+
+                if self.swa_enabled and ep >= self.swa_start:
+                    self.swa_model.update_parameters(self.model)
+                
+            if self.learning_rate_scheduler_enabled:
+                lr_scheduler.step()
+
+        return
+
+    def get_base_transformations(self):
+        base_transforms = [dut.AddWeekends(), 
+                            dut.AddHolidays(),
+                            dut.AddLastWeeksValue(h=self.h),
+                            dut.AddYesterdaysValue(h=self.h),
+                dut.DatetimeConversion(),
+                dut.OnlyFitUsingLastNWeeks(weeks=self.only_fit_using_last_n_weeks),]
+        return base_transforms
+
+    def logworthy_attributes(self):
+        logworthy_attributes = super().logworthy_attributes()
+        logworthy_attributes = {**logworthy_attributes, **self.kwargs}
+
+        logworthy_attributes["n_train_epochs"] = self.n_train_epochs
+
+        logworthy_attributes["only_fit_using_last_n_weeks"] = self.only_fit_using_last_n_weeks
+
+        logworthy_attributes["n_train_epochs"] = self.n_train_epochs
+
+        logworthy_attributes["learning_rate"] = self.learning_rate
+        logworthy_attributes["learning_rate_scheduler_enabled"] = self.learning_rate_scheduler_enabled
+        logworthy_attributes["learning_rate_decay_factor"] = self.learning_rate_decay_factor
+
+        logworthy_attributes["window_size"] = self.window_size
+
+
+        logworthy_attributes["swa_enabled"] = self.swa_enabled
+        logworthy_attributes["swa_start"] = self.swa_start
+
+
+        return logworthy_attributes
+
+    def predict(self, predict_on_test=True, rolling_prediction=False):   
+        if rolling_prediction:
+            raise NotImplementedError
+
+        if predict_on_test:
+            y = self.lstm_forecast(inout=self.test_inout)
+
+        else:
+            assert rolling_prediction is False 
+            y = self.lstm_forecast(inout=self.train_inout)
+
+        return y
+
+    def lstm_forecast(self, inout):
+        assert self.swa_enabled
+
+        y = []
+        
+        with torch.no_grad():
+            for te_i, (seq, labels) in enumerate(inout):
+                
+                if self.swa_enabled:
+                    _y = self.swa_model(seq)
+
+                y.append(_y.item())
+
+        return y
+
 
 
 # class CustomHWES(BaseForecaster):
