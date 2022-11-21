@@ -86,7 +86,7 @@ def single_file(model_type):
 
 if __name__ == "__main__":
 
-    CLI = False
+    CLI = True
 
     if CLI:
         parser = argparse.ArgumentParser()
@@ -115,23 +115,6 @@ if __name__ == "__main__":
         super_sweep(model_type)
 
 
-    
-
-    # super_sweep_model_type("LSTM")
-
-
-    # print("Done!")
-
-    
-    # if 'win' in sys.platform: 
-    #     model_type = MODEL_TYPE
-    #     horizon = HORIZON
-
-    # elif "linux" in sys.platform:
-    #     model_type = sys.argv[0]
-    #     horizon = sys.argv[1]
-
-    
     
 
 

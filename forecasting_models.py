@@ -375,6 +375,7 @@ class CustomSARIMAX(BaseForecaster):
         self.post_init()
         
         self.max_iter = 20
+        self.rolling_predict_rows_to_refit = 4*12
         self.model = self.make_model(df=self.train_df)
         
     
@@ -545,7 +546,6 @@ class CustomNaiveYesterday(BaseForecaster):
         X_df = df.drop(columns="y")
         
         return X_df, y_series
-
 
 
 class CustomLSTM(BaseForecaster):

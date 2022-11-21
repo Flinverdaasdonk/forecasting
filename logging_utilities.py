@@ -77,7 +77,6 @@ def make_and_save_logs(model, logs=None, get_x=True, get_y=True, get_yhat=True, 
         elapsed = time.time() - tic
         logs["time_to_predict"] = elapsed
 
-
         yhat = [float(_yh) for _yh in yhat]
         logs["yhat"] = yhat
         
