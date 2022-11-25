@@ -82,7 +82,7 @@ def super_sweep(model_type, time_compression, aggregate):
     adt = []
 
     for horizon in HORIZONS:
-        for i, data_path in enumerate(tut.generic_yield_fns(h=horizon, specific_folder_name=EVAL_TYPE)):
+        for i, data_path in enumerate(tut.generic_yield_fns(h=horizon, specific_folder_name=EVAL_TYPE, time_compression=time_compression, use_aggregate=aggregate)):
             if TINY_TEST and i % skip_n != 0:
                 continue
                                 
@@ -90,10 +90,11 @@ def super_sweep(model_type, time_compression, aggregate):
                 print(f"{i}/{iterations}: {model_type}, h={horizon}")
 
             try:
-                df = dut.load_df(data_path)
-                m = tut.load_model(model_type, df, horizon, adt, data_path, **kwargs)
+                x=1
+                # df = dut.load_df(data_path)
+                # m = tut.load_model(model_type, df, horizon, adt, data_path, **kwargs)
 
-                fit_eval_log(model=m)
+                # fit_eval_log(model=m)
 
             except Exception as e:
                 lut.enablePrint()
@@ -102,7 +103,7 @@ def super_sweep(model_type, time_compression, aggregate):
 
 def single_file(model_type, time_compression, aggregate):
     H=18
-    
+
     data_path = next(iter(tut.generic_yield_fns(h=H, specific_folder_name=EVAL_TYPE, time_compression=time_compression, use_aggregate=aggregate)))
 
     if VERBOSE:
@@ -146,8 +147,8 @@ if __name__ == "__main__":
         model_type = "RandomForest"
         test_single_file = False
         VERBOSE = True
-        aggregate = True
-        time_compression = False
+        aggregate = False
+        time_compression = True
 
     if test_single_file:
         print(f"{time.ctime()} - Starting single_file test with {model_type} and tiny_test={TINY_TEST}")
