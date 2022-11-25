@@ -66,12 +66,14 @@ def hyperparameter_sweep(**kwargs):
     return total_mse
             
 
-def super_sweep(model_type, time_compression):
+def super_sweep(model_type, time_compression, aggregate):
+
     if model_type == "RandomForest":
         kwargs = {"max_features": 0.4, "max_samples":0.4, "n_estimators": 400, "history_depth": 8}
     else:
         kwargs = {}
-    iterations = sum([len([None for _ in tut.generic_yield_fns(h=h, specific_folder_name=EVAL_TYPE, time_compression=time_compression)]) for h in HORIZONS])
+
+    iterations = sum([len([None for _ in tut.generic_yield_fns(h=h, specific_folder_name=EVAL_TYPE, time_compression=time_compression, use_aggregate=aggregate)]) for h in HORIZONS])
 
     if TINY_TEST:
         skip_n = 15
@@ -98,10 +100,10 @@ def super_sweep(model_type, time_compression):
                 print(f"-----\n ERROR WITH: {m.name} \n at h={horizon} \n for file{data_path}. \n error is: \n {e} \n ------ \n")
 
 
-def single_file(model_type):
-    data_path = next(iter(tut.generic_yield_fns(h=)))
-
-    # data_path = next(iter(((Path(MAIN_DATA_DIR) / EVAL_TYPE) / TEST_CATEGORY).iterdir()))
+def single_file(model_type, time_compression, aggregate):
+    H=18
+    
+    data_path = next(iter(tut.generic_yield_fns(h=H, specific_folder_name=EVAL_TYPE, time_compression=time_compression, use_aggregate=aggregate)))
 
     if VERBOSE:
         print(f"Single sweep: {model_type}, h={HORIZON}, fn={('/').join(data_path.parts[-3:])}")
@@ -127,13 +129,15 @@ if __name__ == "__main__":
         parser.add_argument("model_type", type=str, choices=["RandomForest", "SARIMAX", "LSTM", "Prophet", "LastWeeks", "Yesterdays"])
         parser.add_argument("--verbose", type=bool, default=True)
         parser.add_argument("--test_single_file", type=bool, default=False)
-        parser.add_argument("--data_type", type=str, choices=["aggr", "tc"])
+        parser.add_argument("--aggr", type=bool, default=False)
+        parser.add_argument("--tc", type=bool, default=False)
 
         args = parser.parse_args()
 
         model_type = args.model_type
         test_single_file = args.test_single_file
-        data_type = args.data_type
+        aggregate = args.aggr
+        time_compression = args.tc
 
         VERBOSE = args.verbose
 
@@ -142,13 +146,15 @@ if __name__ == "__main__":
         model_type = "RandomForest"
         test_single_file = False
         VERBOSE = True
+        aggregate = True
+        time_compression = False
 
     if test_single_file:
         print(f"{time.ctime()} - Starting single_file test with {model_type} and tiny_test={TINY_TEST}")
-        single_file(model_type, data_type)
+        single_file(model_type, time_compression=time_compression, aggregate=aggregate)
     else:
-        print(f"{time.ctime()} - Starting super_sweep test with {model_type} and tiny_test={TINY_TEST}")
-        super_sweep(model_type, data_type)
+        print(f"{time.ctime()} - Starting super_sweep: {model_type}. tiny_test={TINY_TEST}, aggregate={aggregate}, time_compression={time_compression}")
+        super_sweep(model_type, time_compression=time_compression, aggregate=aggregate)
 
     print("------------------------ \n FINISHED WITH ALL \n -----------------------------------------")
     
