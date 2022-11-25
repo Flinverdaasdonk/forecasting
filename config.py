@@ -7,8 +7,6 @@ WINDOWS_MAIN_LOG_DIR = r"C:\Users\Flin\OneDrive - TU Eindhoven\Flin\Flin\01 - Un
 LINUX_DATA_DIR = r"datasets"
 LINUX_MAIN_LOG_DIR = r"logs"
 
-print(f"platform: {sys.platform}")
-
 if 'win' in sys.platform:
     MAIN_DATA_DIR = WINDOWS_DATA_DIR
     MAIN_LOG_DIR = WINDOWS_MAIN_LOG_DIR
