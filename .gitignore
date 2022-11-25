@@ -1,6 +1,7 @@
 scrappy_notebooks/*
 scrappy_scripts/*
 logs/*
+figures/*
 __pycache__/
 **/*.pyc
 *.*.pyc
@@ -15,3 +16,4 @@ __pycache__/forecasting_models.cpython-38.pyc
 __pycache__/config.cpython-38.pyc
 __pycache__/data_utilities.cpython-38.pyc
 __pycache__/forecasting_models.cpython-38.pyc
+datasets/processed_logs.csv

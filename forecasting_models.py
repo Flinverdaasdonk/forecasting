@@ -136,13 +136,18 @@ class BaseForecaster:
         return logworthy_attributes
 
 class CustomRandomForest(BaseForecaster):
-    def __init__(self, df, h, additional_df_transformations, data_path, **kwargs):
+    def __init__(self, df, h, additional_df_transformations, data_path, max_features=0.9, max_samples=0.9, history_depth=4, **kwargs):
         super().__init__(df, h, additional_df_transformations=additional_df_transformations, data_path=data_path)
-        self.kwargs = kwargs
+
         self.n_cores = N_CORES
+        kwargs["n_jobs"] = self.n_cores
+        kwargs["max_features"] = max_features
+        kwargs["max_samples"] = max_samples
+
+        self.kwargs = kwargs
         self.model = self.make_model()
 
-        self.ts2row_history_window = 4
+        self.ts2row_history_window = history_depth
         self.ts2row_column_name = "load_profile"
         self.only_fit_using_last_n_weeks = ONLY_FIT_USING_LAST_N_WEEKS
         
@@ -159,16 +164,16 @@ class CustomRandomForest(BaseForecaster):
         logworthy_attributes["only_fit_using_last_n_weeks"] = self.only_fit_using_last_n_weeks
         return logworthy_attributes
         
-
     def make_model(self):
-        return RandomForestRegressor(n_jobs=self.n_cores, max_features=0.9, max_samples=0.9, **self.kwargs)
+        return RandomForestRegressor(**self.kwargs)
 
     def get_base_transformations(self):
         base_transforms = [dut.TimeseriesToRow(column_name=self.ts2row_column_name, 
                 history_window=self.ts2row_history_window), 
                 dut.DatetimeConversion(),
                 dut.AddYesterdaysValue(h=self.h), 
-                dut.AddLastWeeksValue(h=self.h)]
+                dut.AddLastWeeksValue(h=self.h),
+                dut.OnlyFitUsingLastNWeeks(weeks=self.only_fit_using_last_n_weeks)]
         return base_transforms
 
     def fit(self):
@@ -232,7 +237,7 @@ class CustomRandomForest(BaseForecaster):
 
             # account for sliding window
             if self.only_fit_using_last_n_weeks > 0:
-                rows = int(self.only_fit_using_last_n_weeks*7*24*3600 / self.time_between_rows)
+                rows = int(self.only_fit_using_last_n_weeks*ROLLING_PREDICT_DAYS_TO_REFIT*24*3600 / self.time_between_rows)
                 extended_train_X_df = extended_train_X_df.iloc[-rows:]
                 extended_train_y_series = extended_train_y_series.iloc[-rows:]
 

@@ -56,9 +56,10 @@ class TimeseriesToRow(Transform):
 
         assert isinstance(column_name, str)
         assert isinstance(history_window, int)
-        assert history_window > 0
 
     def __call__(self, df):
+        if self.history_window == 0:
+            return df
         # grab the column from the df we want to offset, e.g. [a, b, c, d]
         series = list(df[self.column_name].values)
 
@@ -398,6 +399,9 @@ def get_timedeltas(df):
 def load_df(path):
     df = pd.read_csv(path)
     df = df.iloc[TINY_TEST_BEGIN:TINY_TEST_END] if TINY_TEST else df
+
+    if "col" in df.columns:
+        df.drop(columns="col", inplace=True)
 
     return df
 

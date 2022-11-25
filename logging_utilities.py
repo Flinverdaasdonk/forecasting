@@ -29,13 +29,16 @@ def find_next_available_ID(log_dir=MAIN_LOG_DIR):
 
     return id
 
-def generate_fn(model):
+def generate_fn(model, prefix=LOG_NAME_PREFIX):
     # fn format is: ID_h={HORIZON}_model_name
     id = find_next_available_ID()
     h = model.h
     model_name = model.name
 
-    fn = f"{id}_h={h}_{model_name}"
+    if LOG_NAME_PREFIX is None:
+        fn = f"{id}_h={h}_{model_name}"
+    else:
+        fn = f"{id}_{LOG_NAME_PREFIX}_h={h}_{model_name}"
 
     return fn
 
