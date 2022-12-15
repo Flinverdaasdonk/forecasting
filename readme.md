@@ -27,6 +27,7 @@ datasets/                   <-- contains all datasets
 useful notebooks/           <-- Contains lots of (poorly commented) notebooks to do quick prototyping
 ├─ analyze_logs.ipynb       <-- Contains some functionalities to read logs of json logs, and convert them to a dataframe. 
 ├─ generate_final_figs.ipynb<-- Shows you how to process the log files
+requirements.txt            <-- Python dependancies
 forecasting_ex1.py          <-- Shows simple example of how to do your first forecast
 forecasting_ex2.py          <-- Shows how to do lots of forecasts
 config.py                   <-- contains script configurations; loaded by every file. Helps to configure number of cores, whether to do a small prototyping test, etc
