@@ -1,17 +1,22 @@
 import sys
 import os
 
+# where you store datasets on windows
 WINDOWS_DATA_DIR = r"C:\Users\Flin\OneDrive - TU Eindhoven\Flin\Flin\01 - Uni\00_Internship\Nokia\00_Programming\forecasting\datasets"
+# where you log on windows
 WINDOWS_MAIN_LOG_DIR = r"C:\Users\Flin\OneDrive - TU Eindhoven\Flin\Flin\01 - Uni\00_Internship\Nokia\00_Programming\forecasting\logs"
 
+# where the datasets are on linux
 LINUX_DATA_DIR = r"datasets"
+
+# where the logs are on linux
 LINUX_MAIN_LOG_DIR = r"logs"
 
 if 'win' in sys.platform:
     MAIN_DATA_DIR = WINDOWS_DATA_DIR
     MAIN_LOG_DIR = WINDOWS_MAIN_LOG_DIR
-    N_CORES = 6
-    EVAL_TYPE = "test"
+    N_CORES = 6  # the number of cores you'll use
+    EVAL_TYPE = "test"  # if using the functions in training_utilities.py, they will default to this subfolder
 
 elif "linux" in sys.platform:
     MAIN_DATA_DIR = LINUX_DATA_DIR
