@@ -17,19 +17,6 @@ warnings.simplefilter(action="ignore", category=UserWarning)
 
 
 
-def fit_eval_log(model):
-    tic = time.time()
-    logs = {}
-
-    logs["time_before_fit"] = repr(time.ctime())
-
-    lut.blockPrint()
-    model.fit()
-    lut.enablePrint()
-
-    logs["time_to_fit"] = time.time() - tic
-
-    lut.make_and_save_logs(model=model, logs=logs)
 
 
 def hyperparameter_sweep(**kwargs):
@@ -94,7 +81,7 @@ def super_sweep(model_type, time_compression, aggregate):
                 df = dut.load_df(data_path)
                 m = tut.load_model(model_type, df, horizon, adt, data_path, **kwargs)
 
-                fit_eval_log(model=m)
+                tut.fit_eval_log(model=m)
 
             except Exception as e:
                 lut.enablePrint()

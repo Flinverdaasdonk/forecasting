@@ -59,6 +59,11 @@ class BaseForecaster:
         
 
     def post_init(self):
+        # meant to be called by a child class towards the end/middle of the __init__
+        # passes the source df through the data pipeline
+        # handles train/test split
+        # Also adds extra loggables
+
         self.name = self.__class__.__name__
         self.fn = f"{self.name}_h={self.h}"
         self.data_transformations = self.get_data_transformations()
@@ -136,8 +141,13 @@ class BaseForecaster:
         return logworthy_attributes
 
 class CustomRandomForest(BaseForecaster):
-    def __init__(self, df, h, additional_df_transformations, data_path, max_features=0.9, max_samples=0.9, history_depth=4, **kwargs):
+    """ A Random Forest Regressor which implements sklearns 'RandomForestRegressor' in its make model function"""
+    def __init__(self, df, h, additional_df_transformations, data_path, max_features=0.4, max_samples=0.4, history_depth=8, **kwargs):
         super().__init__(df, h, additional_df_transformations=additional_df_transformations, data_path=data_path)
+        # the __init__ of BaseForecaster handles:
+        #  - Making sure which datetimes correspond to what prediction
+        #  - Logging some of the settings (h, data_path, etc.) 
+        #  - preparing the datapipeline (not yet executing)
 
         self.n_cores = N_CORES
         kwargs["n_jobs"] = self.n_cores
@@ -145,16 +155,19 @@ class CustomRandomForest(BaseForecaster):
         kwargs["max_samples"] = max_samples
 
         self.kwargs = kwargs
-        self.model = self.make_model()
+        self.model = self.make_model()  # instantiate sklearns RandomForestRegressor in self.model
 
-        self.ts2row_history_window = history_depth
+        # all are used in the data pipeline
+        self.ts2row_history_window = history_depth   
         self.ts2row_column_name = "load_profile"
         self.only_fit_using_last_n_weeks = ONLY_FIT_USING_LAST_N_WEEKS
         
-
+        # passes data through pipeline, makes train/test split, adds extra settings to loggable information
         self.post_init()
 
     def logworthy_attributes(self):
+        # In logging_utilities, some of the functions will call this method, 
+        # this method will return a dictionary of settings that should be logged
         logworthy_attributes = super().logworthy_attributes()
         logworthy_attributes = {**logworthy_attributes, **self.kwargs}
 
@@ -168,9 +181,9 @@ class CustomRandomForest(BaseForecaster):
         return RandomForestRegressor(**self.kwargs)
 
     def get_base_transformations(self):
-        base_transforms = [dut.TimeseriesToRow(column_name=self.ts2row_column_name, 
+        base_transforms = [dut.TimeseriesToRow(column_name=self.ts2row_column_name,  # add preceding samples as additional features in the current sample
                 history_window=self.ts2row_history_window), 
-                dut.DatetimeConversion(),
+                dut.DatetimeConversion(),  # convert a datetime such as YYYY-mm-dd HH:MM:SS into multiple columns, possible mapped to corresponding sines/cosines
                 dut.AddYesterdaysValue(h=self.h), 
                 dut.AddLastWeeksValue(h=self.h),
                 dut.OnlyFitUsingLastNWeeks(weeks=self.only_fit_using_last_n_weeks)]
@@ -185,6 +198,9 @@ class CustomRandomForest(BaseForecaster):
         self.model.fit(X, y)
 
     def final_df_preprocessing(self, df):
+        # mostly used to determine which features are eventually used by the model, but 
+        # also as method of preprocessing the data right before fitting. However
+        # this doesn't work so cleanly with all models
         X_df = df.copy(deep=True)
 
         y_series = X_df["y"]
@@ -194,7 +210,10 @@ class CustomRandomForest(BaseForecaster):
         return X_df, y_series
 
     def predict(self, predict_on_test=True, rolling_prediction=False):
+
+        
         if rolling_prediction:
+            # do a rolling prediction; refit on the testing data during evaluation
             assert predict_on_test
             self.rolling_predict()
         if predict_on_test:
@@ -206,17 +225,25 @@ class CustomRandomForest(BaseForecaster):
         return self.model.predict(X)
 
     def rolling_predict(self):
+        # grab all data in the correct X, y format
         train_X_df, train_y_series = self.final_df_preprocessing(df=self.train_df)
         test_X_df, test_y_series = self.final_df_preprocessing(df=self.test_df)
 
-        n = self.rolling_predict_rows_to_refit
+        # determine how many times we need to refit
+        n = self.rolling_predict_rows_to_refit  # defined in BaseForecaster.__init__()
         iterations = np.ceil(len(test_X_df) / n).astype(int)
 
-        extended_train_X_df = train_X_df
+        # instantiating the extended train df already
+        extended_train_X_df = train_X_df 
         extended_train_y_series = train_y_series
+
+        # log all predictions
         yhat = []
 
+        # instantiate the new model (for now by simply grabbing the existing model)
         new_model = self.model
+
+        # for each time we'll refit
         for i in range(iterations):
 
             # grab data corresponding to this rolling window

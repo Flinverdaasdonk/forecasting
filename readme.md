@@ -6,6 +6,10 @@ This file helps you get started working with this forecasting project. The goal 
 3. Next I'll refer to a simple script that can be used to do your first forecast. 
 3. Lastly I'll refer to some bigger scripts that can be used to do lots of forecasts in one go.
 
+### important remarks.
+The goal of this package is make it easy to compare the performance of several models over a variety of datasets. Once you have decided that a specific forecasting model works best for your usecase, I recommend stripping out all the unnecessary parts of the project. Otherwise there will be a lot of unnecessary luggage in your final code.
+
+
 ## File-tree structure
 
 This sections gives the filetree structure, as well as a short explanation of each file/folder. This should help you make sense the folder structure
@@ -21,6 +25,10 @@ datasets/                   <-- contains all datasets
 ├─ validation/              <-- all validation datasets; same structure as /train/
 ├─ remainders/              <-- load profiles that are never used
 useful notebooks/           <-- Contains lots of (poorly commented) notebooks to do quick prototyping
+├─ analyze_logs.ipynb       <-- Contains some functionalities to read logs of json logs, and convert them to a dataframe. 
+├─ generate_final_figs.ipynb<-- Shows you how to process the log files
+forecasting_ex1.py          <-- Shows simple example of how to do your first forecast
+forecasting_ex2.py          <-- Shows how to do lots of forecasts
 config.py                   <-- contains script configurations; loaded by every file. Helps to configure number of cores, whether to do a small prototyping test, etc
 data_utilities.py           <-- contains utilities for the data processing pipeline that goes inside each model, as well as a couple small functions
 deep_learning_utilities.py  <-- Creates the neural network architecture and functions to convert the regular dataframe into a format usable by neural networks
@@ -55,4 +63,8 @@ To do a single forecast, the workflow is as follows
 
 ## Making your first forecast
 
-In the file `first_forecast.py` I walk you through a way to do your first forecast in a simple way
+In the file `forecasting_ex1.py` I walk you through a way to do your first forecast in a simple way
+
+
+## Making lots of forecasts
+

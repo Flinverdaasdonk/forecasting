@@ -35,7 +35,7 @@ def generate_fn(model, prefix=LOG_NAME_PREFIX):
     h = model.h
     model_name = model.name
 
-    if LOG_NAME_PREFIX is None:
+    if LOG_NAME_PREFIX is None or len(LOG_NAME_PREFIX) == 0:
         fn = f"{id}_h={h}_{model_name}"
     else:
         fn = f"{id}_{LOG_NAME_PREFIX}_h={h}_{model_name}"

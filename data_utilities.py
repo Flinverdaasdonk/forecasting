@@ -398,7 +398,9 @@ def get_timedeltas(df):
 
 def load_df(path):
     df = pd.read_csv(path)
-    df = df.iloc[TINY_TEST_BEGIN:TINY_TEST_END] if TINY_TEST else df
+
+    if TINY_TEST:
+        df = df.iloc[TINY_TEST_BEGIN:TINY_TEST_END]
 
     if "col" in df.columns:
         df.drop(columns="col", inplace=True)

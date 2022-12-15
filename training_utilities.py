@@ -1,6 +1,8 @@
 from pathlib import Path
 from config import *
 import forecasting_models as models
+import logging_utilities as lut
+import time
 
 def generic_yield_fns(h, specific_folder_name, main_data_dir=MAIN_DATA_DIR, time_compression=False, use_aggregate=False):
     assert not (time_compression and use_aggregate), f"tc={time_compression}, aggr={use_aggregate}"
@@ -69,6 +71,21 @@ def load_model(model_type, df, h, adt, data_path, **kwargs):
         raise NotImplementedError
 
     return m
+
+
+def fit_eval_log(model):
+    tic = time.time()
+    logs = {}
+
+    logs["time_before_fit"] = repr(time.ctime())
+
+    lut.blockPrint()
+    model.fit()
+    lut.enablePrint()
+
+    logs["time_to_fit"] = time.time() - tic
+
+    lut.make_and_save_logs(model=model, logs=logs)
 
 
 if __name__ == "__main__":
