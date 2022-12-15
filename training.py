@@ -124,7 +124,7 @@ def single_file(model_type, time_compression, aggregate):
 
 if __name__ == "__main__":
 
-    CLI = False
+    CLI = True
 
     if CLI:
         print("Running from CLI")
@@ -149,8 +149,8 @@ if __name__ == "__main__":
         model_type = "RandomForest"
         test_single_file = False
         VERBOSE = True
-        aggregate = True
-        time_compression = False
+        aggregate = False
+        time_compression = True
 
     if test_single_file:
         print(f"{time.ctime()} - Starting single_file test with {model_type} and tiny_test={TINY_TEST}")
