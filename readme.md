@@ -68,4 +68,4 @@ In the file `forecasting_ex1.py` I walk you through a way to do your first forec
 
 
 ## Making lots of forecasts
-
+In the file `forecasting_ex2.py` I walk you through a way to do your first forecast in a simple way
